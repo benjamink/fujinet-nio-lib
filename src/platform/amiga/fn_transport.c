@@ -37,6 +37,8 @@ static struct fn_amiga_transport g_transport;
 static uint8_t last_broker_stage;
 static uint8_t last_broker_result;
 static uint8_t last_broker_cause;
+static uint8_t last_native_error;
+static uint16_t last_native_status;
 
 void fn_amiga_transport_last_broker_detail(uint8_t *stage, uint8_t *result)
 {
@@ -47,6 +49,13 @@ void fn_amiga_transport_last_broker_detail(uint8_t *stage, uint8_t *result)
 void fn_amiga_transport_last_broker_cause(uint8_t *cause)
 {
     if (cause != NULL) *cause = last_broker_cause;
+}
+
+void fn_amiga_transport_last_serial_detail(uint8_t *native_error,
+                                            uint16_t *status)
+{
+    if (native_error != NULL) *native_error = last_native_error;
+    if (status != NULL) *status = last_native_status;
 }
 
 void fn_transport_close(void);
@@ -179,6 +188,8 @@ uint8_t fn_transport_exchange_buffers(const uint8_t *request,
     last_broker_stage = req.fn_pad[0];
     last_broker_result = req.fn_pad[1];
     last_broker_cause = req.fn_pad[2];
+    last_native_error = (uint8_t)(req.fn_flags & 0xFF);
+    last_native_status = (uint16_t)(req.fn_flags >> 8);
 
     if (req.fn_io.io_Error != 0) {
         result = map_native_io_error(req.fn_io.io_Error);

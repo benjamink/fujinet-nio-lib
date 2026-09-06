@@ -629,6 +629,9 @@ void fn_amiga_transport_last_broker_detail(uint8_t *stage, uint8_t *result);
 /* Detailed class for the most recent broker exchange: zero on success.
  * The value is observational and does not alter fn_* error handling. */
 void fn_amiga_transport_last_broker_cause(uint8_t *cause);
+/* Native serial.device error/status for the most recent broker exchange. */
+void fn_amiga_transport_last_serial_detail(uint8_t *native_error,
+                                            uint16_t *status);
 #endif
 
 uint8_t fn_write(fn_handle_t handle,
