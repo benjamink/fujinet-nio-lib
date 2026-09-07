@@ -155,10 +155,41 @@ static int test_session_timeout_and_busy(void)
     return 0;
 }
 
+static int test_lost_opening_end(void)
+{
+    fake_serial_t fake = {0};
+    fn_stream_session_t session;
+    uint8_t wire[64];
+    uint8_t response[16];
+    uint16_t response_length = 0;
+    const uint8_t request[] = {0x01, 0xFC, 0x00};
+    const uint8_t response_packet[] = {0x01, 0xFC, 0x00, 0x02};
+    uint8_t encoded[64];
+    uint16_t encoded_length;
+
+    encoded_length = fn_slip_encode(response_packet, sizeof(response_packet),
+                                    encoded);
+    /* Opening END dropped; payload and closing END remain. */
+    memcpy(fake.rx, encoded + 1, (size_t)(encoded_length - 1U));
+    fake.rx_length = (uint16_t)(encoded_length - 1U);
+    if (fn_stream_session_init(&session, &fake_ops, &fake, wire, sizeof(wire)) !=
+            FN_OK ||
+        fn_stream_session_open(&session) != FN_OK)
+        return 1;
+    if (fn_stream_session_request(&session, request, sizeof(request), response,
+                                  sizeof(response), &response_length, 100) !=
+        FN_OK)
+        return 1;
+    if (response_length != sizeof(response_packet) ||
+        memcmp(response, response_packet, sizeof(response_packet)) != 0)
+        return 1;
+    return 0;
+}
+
 int main(void)
 {
     if (test_rs232_slip_session() || test_bulk_write_slip_session() ||
-        test_session_timeout_and_busy()) {
+        test_session_timeout_and_busy() || test_lost_opening_end()) {
         puts("session wire tests failed");
         return 1;
     }

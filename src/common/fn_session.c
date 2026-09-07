@@ -62,7 +62,6 @@ static uint8_t read_frame(fn_stream_session_t *session, uint16_t timeout_ms,
 {
     uint16_t elapsed = 0;
     uint16_t length = 0;
-    uint8_t started = 0;
     uint8_t value;
 
     while (elapsed < timeout_ms) {
@@ -76,11 +75,15 @@ static uint8_t read_frame(fn_stream_session_t *session, uint16_t timeout_ms,
             continue;
         }
 
-        if (!started) {
-            if (value != SLIP_END) continue;
-            started = 1;
-        }
-
+        /*
+         * Do not skip bytes before the first END, and do not insert one.
+         * A frame still closes only on a real SLIP_END (0xC0) with length
+         * >= 2. Payload 0xC0 is escaped as DB DC, so it cannot end the
+         * frame. fn_slip_decode already treats a leading END as optional.
+         * Hunt-for-END recovered line noise but, if the opening END was
+         * missing, skipped the payload and waited forever after the
+         * trailing END (PiStorm 38400 first file-list).
+         */
         if (length >= session->wire_capacity) return FN_ERR_IO;
         session->wire_buffer[length++] = value;
         if (length >= 2 && value == SLIP_END) {
