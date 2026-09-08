@@ -57,6 +57,16 @@ static uint8_t write_frame(fn_stream_session_t *session,
                                     FN_SESSION_WRITE_TIMEOUT);
 }
 
+static uint8_t decoded_fujibus_ok(const uint8_t *response, uint16_t decoded_length)
+{
+    uint16_t pkt_len;
+
+    if (response == 0 || decoded_length < FN_HEADER_SIZE)
+        return 0;
+    pkt_len = (uint16_t)(response[2] | ((uint16_t)response[3] << 8));
+    return pkt_len == decoded_length;
+}
+
 static uint8_t read_frame(fn_stream_session_t *session, uint16_t timeout_ms,
                           uint16_t *frame_length)
 {
@@ -177,20 +187,25 @@ uint8_t fn_stream_session_request(fn_stream_session_t *session,
     session->busy = 1;
     result = fn_stream_session_flush(session);
     if (result == FN_OK) result = write_frame(session, request, request_length);
-    if (result == FN_OK) {
-        result = read_frame(session, timeout_ms, &raw_length);
         if (result == FN_OK) {
-            decoded_length = fn_slip_decode(session->wire_buffer, raw_length,
-                                             response);
-            if (!decoded_length) {
-                result = FN_ERR_IO;
-            } else if (decoded_length > response_capacity) {
-                result = FN_ERR_IO;
-            } else {
-                *response_length = decoded_length;
+            result = read_frame(session, timeout_ms, &raw_length);
+            if (result == FN_OK) {
+                decoded_length = fn_slip_decode(session->wire_buffer, raw_length,
+                                                 response);
+                if (!decoded_length) {
+                    result = FN_ERR_IO;
+                } else if (decoded_length > response_capacity) {
+                    result = FN_ERR_IO;
+                } else if (!decoded_fujibus_ok(response, decoded_length)) {
+                    /* Closed SLIP with a truncated/corrupt FujiBus body.
+                     * Returning OK here made PiStorm first-after-idle
+                     * host-get/file-list look successful (resp_len 40 vs 44). */
+                    result = FN_ERR_IO;
+                } else {
+                    *response_length = decoded_length;
+                }
             }
         }
-    }
     session->busy = 0;
     return result;
 }

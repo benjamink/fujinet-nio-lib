@@ -73,6 +73,16 @@ static const fn_stream_channel_ops_t fake_bulk_ops = {
     fake_open, fake_close, fake_write, fake_read, fake_flush, fake_write_bytes
 };
 
+static void mini_fuji(uint8_t *buf, uint8_t device, uint8_t cmd, uint16_t total)
+{
+    buf[0] = device;
+    buf[1] = cmd;
+    buf[2] = (uint8_t)(total & 0xFF);
+    buf[3] = (uint8_t)(total >> 8);
+    buf[4] = 0;
+    buf[5] = 0;
+}
+
 static int test_rs232_slip_session(void)
 {
     fake_serial_t fake = {0};
@@ -81,8 +91,10 @@ static int test_rs232_slip_session(void)
     uint8_t response[16];
     uint16_t response_length = 0;
     const uint8_t request[] = {0x01, 0xFC, 0xDB, 0xC0};
-    const uint8_t response_packet[] = {0x01, 0xFC, 0x00, 0xC0, 0xDB};
+    uint8_t response_packet[FN_HEADER_SIZE];
     uint16_t encoded_length;
+
+    mini_fuji(response_packet, 0x01, 0xFC, FN_HEADER_SIZE);
 
     encoded_length = fn_slip_encode(response_packet, sizeof(response_packet), fake.rx);
     fake.rx_length = encoded_length;
@@ -109,7 +121,9 @@ static int test_bulk_write_slip_session(void)
     uint8_t response[16];
     uint16_t response_length = 0;
     const uint8_t request[] = {0x01, 0xFC, 0xDB, 0xC0};
-    const uint8_t response_packet[] = {0x01, 0xFC, 0x00};
+    uint8_t response_packet[FN_HEADER_SIZE];
+
+    mini_fuji(response_packet, 0x01, 0xFC, FN_HEADER_SIZE);
 
     fake.rx_length = fn_slip_encode(response_packet, sizeof(response_packet),
                                     fake.rx);
@@ -163,9 +177,11 @@ static int test_lost_opening_end(void)
     uint8_t response[16];
     uint16_t response_length = 0;
     const uint8_t request[] = {0x01, 0xFC, 0x00};
-    const uint8_t response_packet[] = {0x01, 0xFC, 0x00, 0x02};
+    uint8_t response_packet[FN_HEADER_SIZE];
     uint8_t encoded[64];
     uint16_t encoded_length;
+
+    mini_fuji(response_packet, 0x01, 0xFC, FN_HEADER_SIZE);
 
     encoded_length = fn_slip_encode(response_packet, sizeof(response_packet),
                                     encoded);
@@ -186,10 +202,37 @@ static int test_lost_opening_end(void)
     return 0;
 }
 
+static int test_short_fujibus_is_io(void)
+{
+    fake_serial_t fake = {0};
+    fn_stream_session_t session;
+    uint8_t wire[64];
+    uint8_t response[16];
+    uint16_t response_length = 0;
+    uint8_t full[8];
+    const uint8_t request[] = {0x01, 0xFC, 0x00};
+
+    mini_fuji(full, 0xFE, 0x02, 8);
+    full[6] = 0x11;
+    full[7] = 0x22;
+    /* Length field says 8, but the SLIP body is only the 6-byte header. */
+    fake.rx_length = fn_slip_encode(full, FN_HEADER_SIZE, fake.rx);
+    if (fn_stream_session_init(&session, &fake_ops, &fake, wire, sizeof(wire)) !=
+            FN_OK ||
+        fn_stream_session_open(&session) != FN_OK)
+        return 1;
+    if (fn_stream_session_request(&session, request, sizeof(request), response,
+                                  sizeof(response), &response_length, 100) !=
+        FN_ERR_IO)
+        return 1;
+    return 0;
+}
+
 int main(void)
 {
     if (test_rs232_slip_session() || test_bulk_write_slip_session() ||
-        test_session_timeout_and_busy() || test_lost_opening_end()) {
+        test_session_timeout_and_busy() || test_lost_opening_end() ||
+        test_short_fujibus_is_io()) {
         puts("session wire tests failed");
         return 1;
     }
