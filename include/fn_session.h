@@ -41,6 +41,8 @@ typedef struct {
     void *context;
     uint8_t *wire_buffer;
     uint16_t wire_capacity;
+    uint16_t last_raw_length;
+    uint16_t last_decoded_length;
     fn_session_capabilities_t capabilities;
     uint8_t opened;
     uint8_t busy;

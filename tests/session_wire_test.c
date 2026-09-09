@@ -225,6 +225,10 @@ static int test_short_fujibus_is_io(void)
                                   sizeof(response), &response_length, 100) !=
         FN_ERR_IO)
         return 1;
+    if (session.last_decoded_length != FN_HEADER_SIZE)
+        return 1;
+    if (session.last_raw_length < (uint16_t)(FN_HEADER_SIZE + 2U))
+        return 1;
     return 0;
 }
 

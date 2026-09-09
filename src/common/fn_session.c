@@ -94,13 +94,18 @@ static uint8_t read_frame(fn_stream_session_t *session, uint16_t timeout_ms,
          * missing, skipped the payload and waited forever after the
          * trailing END (PiStorm 38400 first file-list).
          */
-        if (length >= session->wire_capacity) return FN_ERR_IO;
+        if (length >= session->wire_capacity) {
+            session->last_raw_length = length;
+            return FN_ERR_IO;
+        }
         session->wire_buffer[length++] = value;
         if (length >= 2 && value == SLIP_END) {
             *frame_length = length;
+            session->last_raw_length = length;
             return FN_OK;
         }
     }
+    session->last_raw_length = length;
     return FN_ERR_TIMEOUT;
 }
 
@@ -119,6 +124,8 @@ uint8_t fn_stream_session_init(fn_stream_session_t *session,
     session->context = context;
     session->wire_buffer = wire_buffer;
     session->wire_capacity = wire_capacity;
+    session->last_raw_length = 0;
+    session->last_decoded_length = 0;
     session->capabilities.max_packet_size =
         (uint16_t)(wire_capacity > 2 ? (wire_capacity - 2) / 2 : 0);
     session->capabilities.max_payload_size =
@@ -185,6 +192,8 @@ uint8_t fn_stream_session_request(fn_stream_session_t *session,
     }
 
     session->busy = 1;
+    session->last_raw_length = 0;
+    session->last_decoded_length = 0;
     result = fn_stream_session_flush(session);
     if (result == FN_OK) result = write_frame(session, request, request_length);
         if (result == FN_OK) {
@@ -192,6 +201,7 @@ uint8_t fn_stream_session_request(fn_stream_session_t *session,
             if (result == FN_OK) {
                 decoded_length = fn_slip_decode(session->wire_buffer, raw_length,
                                                  response);
+                session->last_decoded_length = decoded_length;
                 if (!decoded_length) {
                     result = FN_ERR_IO;
                 } else if (decoded_length > response_capacity) {
