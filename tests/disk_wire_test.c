@@ -113,6 +113,17 @@ static int test_mount_info_read_write(void)
     return 0;
 }
 
+static int test_mount_passes_explicit_type(void)
+{
+    fn_disk_info_t info;
+
+    /* Types are the fujinet-nio disk::ImageType values, sent unchanged. */
+    response_status = 0;
+    if (fn_disk_mount(1, "host:/mac/system.image", 1, FN_DISK_TYPE_DC42, 0, &info) != FN_OK ||
+        last_command != 0x01 || last_payload[3] != 5) { puts("dc42 type mismatch"); return 1; }
+    return 0;
+}
+
 static int test_validation_and_status(void)
 {
     uint8_t data[4];
@@ -186,7 +197,8 @@ static int test_protocol_vectors(void)
 
 int main(void)
 {
-    if (test_mount_info_read_write() || test_validation_and_status() ||
+    if (test_mount_info_read_write() || test_mount_passes_explicit_type() ||
+        test_validation_and_status() ||
         test_info_response_with_optional_last_error() ||
         test_info_response_without_optional_last_error() ||
         test_protocol_vectors()) {

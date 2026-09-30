@@ -360,6 +360,7 @@ typedef fn_service_io_t fn_slot_catalog_io_t;
 #define FN_DISK_TYPE_SSD  2
 #define FN_DISK_TYPE_DSD  3
 #define FN_DISK_TYPE_RAW  4
+#define FN_DISK_TYPE_DC42 5 /* Apple DiskCopy 4.2 (Mac floppy); mount only, no Create */
 
 /** DiskDevice Info/Mount response flags. */
 #define FN_DISK_FLAG_MOUNTED  0x01
