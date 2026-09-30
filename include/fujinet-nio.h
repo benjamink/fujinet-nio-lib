@@ -362,6 +362,35 @@ typedef fn_service_io_t fn_slot_catalog_io_t;
 #define FN_DISK_TYPE_RAW  4
 #define FN_DISK_TYPE_DC42 5 /* Apple DiskCopy 4.2 (Mac floppy); mount only, no Create */
 
+/*
+ * Why a DiskDevice call failed (fujinet-nio disk::DiskError). A failed call
+ * returns the transport status as FN_ERR_*; fn_disk_last_error() (or
+ * fn_disk_last_error_context()) then gives the exact reason. The values are
+ * wire protocol: new ones are appended, never renumbered. See "Status and
+ * error mapping" in fujinet-nio's docs/disk_device_protocol.md.
+ */
+#define FN_DISK_ERR_NONE                0  /* the last call succeeded */
+#define FN_DISK_ERR_INVALID_SLOT        1
+#define FN_DISK_ERR_INVALID_REQUEST     2
+#define FN_DISK_ERR_NO_SUCH_FILESYSTEM  3  /* URI names no filesystem */
+#define FN_DISK_ERR_FILE_NOT_FOUND      4
+#define FN_DISK_ERR_ALREADY_EXISTS      5
+#define FN_DISK_ERR_OPEN_FAILED         6
+#define FN_DISK_ERR_UNSUPPORTED_TYPE    7  /* recognised, but not handled */
+#define FN_DISK_ERR_BAD_IMAGE           8  /* recognised format, invalid */
+#define FN_DISK_ERR_INVALID_GEOMETRY    9  /* sector size does not fit */
+#define FN_DISK_ERR_NOT_MOUNTED         10
+#define FN_DISK_ERR_READ_ONLY           11
+#define FN_DISK_ERR_OUT_OF_RANGE        12
+#define FN_DISK_ERR_IO                  13
+#define FN_DISK_ERR_INTERNAL            14
+#define FN_DISK_ERR_GEOMETRY_REQUIRED   15 /* NIO cannot tell the type or
+                                              sector size: mount again with
+                                              the ones this machine uses */
+#define FN_DISK_ERR_UNREPORTED          0xFF /* failed without a disk error:
+                                                a transport failure, or an
+                                                NIO that predates them */
+
 /** DiskDevice Info/Mount response flags. */
 #define FN_DISK_FLAG_MOUNTED  0x01
 #define FN_DISK_FLAG_READONLY 0x02
@@ -400,7 +429,11 @@ typedef struct {
     uint8_t packet_request[FN_DISK_CONTEXT_PACKET_SIZE];
     uint8_t packet_response[FN_DISK_CONTEXT_PACKET_SIZE];
     uint8_t codec_scratch[FN_DISK_CONTEXT_PACKET_SIZE];
+    uint8_t last_error; /* FN_DISK_ERR_*; read with fn_disk_last_error_context() */
 } fn_disk_client_context_t;
+
+/** FN_DISK_ERR_* for the context's most recent DiskDevice call. */
+uint8_t fn_disk_last_error_context(const fn_disk_client_context_t *context);
 
 uint8_t fn_disk_context_init(fn_disk_client_context_t *context,
                              fn_disk_exchange_fn exchange,
@@ -439,6 +472,14 @@ uint8_t fn_disk_inspect_context(fn_disk_client_context_t *context,
 uint8_t fn_disk_mount(uint8_t slot, const char *uri, uint8_t readonly,
                       uint8_t type, uint16_t sector_size_hint,
                       fn_disk_info_t *info);
+
+/**
+ * FN_DISK_ERR_* for the most recent fn_disk_*() call: FN_DISK_ERR_NONE after
+ * success, the exact reason after a failure NIO explained, otherwise
+ * FN_DISK_ERR_UNREPORTED. After FN_DISK_ERR_GEOMETRY_REQUIRED, mount again
+ * with the image type and sector size this machine uses.
+ */
+uint8_t fn_disk_last_error(void);
 
 /** Unmount a DiskDevice slot. */
 uint8_t fn_disk_unmount(uint8_t slot);

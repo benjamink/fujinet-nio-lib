@@ -98,6 +98,22 @@ static uint8_t parse_info(const uint8_t *reply, uint16_t length,
     return FN_OK;
 }
 
+static uint8_t fn_disk_error = FN_DISK_ERR_NONE;
+
+/* The DiskError a failed response carries as {version, DiskError}. */
+static uint8_t failure_disk_error(const uint8_t *payload, uint16_t length)
+{
+    if (payload != 0 && length == 2 && payload[0] == FN_DISK_PROTOCOL_VERSION) {
+        return payload[1];
+    }
+    return FN_DISK_ERR_UNREPORTED;
+}
+
+uint8_t fn_disk_last_error(void)
+{
+    return fn_disk_error;
+}
+
 static uint8_t disk_call(uint8_t command, const void *request,
                          uint16_t request_length, void *reply,
                          uint16_t reply_capacity, uint16_t *reply_length)
@@ -106,8 +122,12 @@ static uint8_t disk_call(uint8_t command, const void *request,
     uint8_t result = fn_raw_call(FN_DEVICE_DISK, command,
                                  request, request_length, reply,
                                  reply_capacity, &response);
+    fn_disk_error = FN_DISK_ERR_UNREPORTED;
     if (result != FN_OK) return result;
     if (reply_length) *reply_length = response.payload_length;
+    fn_disk_error = response.status == 0
+        ? FN_DISK_ERR_NONE
+        : failure_disk_error((const uint8_t *)reply, response.payload_length);
     return disk_status(response.status);
 }
 
@@ -169,7 +189,9 @@ static uint8_t context_disk_call(fn_disk_client_context_t *context,
     uint8_t status;
     uint8_t result;
 
-    if (context == NULL || context->exchange == NULL ||
+    if (context == NULL) return FN_ERR_INVALID;
+    context->last_error = FN_DISK_ERR_UNREPORTED;
+    if (context->exchange == NULL ||
         request_length > FN_DISK_CONTEXT_PACKET_SIZE - FN_HEADER_SIZE) {
         return FN_ERR_INVALID;
     }
@@ -200,6 +222,9 @@ static uint8_t context_disk_call(fn_disk_client_context_t *context,
                context->packet_response + data_offset, data_length);
     }
     if (reply_length != NULL) *reply_length = data_length;
+    context->last_error = status == 0
+        ? FN_DISK_ERR_NONE
+        : failure_disk_error(context->codec_scratch, data_length);
     return disk_status(status);
 }
 
@@ -212,6 +237,11 @@ uint8_t fn_disk_context_init(fn_disk_client_context_t *context,
     context->exchange = exchange;
     context->exchange_context = exchange_context;
     return FN_OK;
+}
+
+uint8_t fn_disk_last_error_context(const fn_disk_client_context_t *context)
+{
+    return context != NULL ? context->last_error : FN_DISK_ERR_UNREPORTED;
 }
 
 uint8_t fn_disk_mount_context(fn_disk_client_context_t *context, uint8_t slot,

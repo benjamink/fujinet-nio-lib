@@ -41,6 +41,25 @@ static uint8_t inspect_exchange(void *opaque, const uint8_t *request,
     return FN_OK;
 }
 
+/* NIO refusing a mount it cannot size: status InvalidRequest, {1, error}. */
+static uint8_t geometry_required_exchange(void *opaque, const uint8_t *request,
+                                          uint16_t request_length, uint8_t *response,
+                                          uint16_t response_capacity,
+                                          uint16_t *response_length)
+{
+    uint16_t length = 9;
+    (void)opaque; (void)request_length;
+    if (response_capacity < length || request[1] != 0x01) return FN_ERR_IO;
+    memset(response, 0, length);
+    response[0] = 0xFC; response[1] = 0x01; response[2] = (uint8_t)length;
+    response[5] = 1; response[6] = 2; /* one u8 status param: InvalidRequest */
+    response[7] = FN_DISK_PROTOCOL_VERSION;
+    response[8] = FN_DISK_ERR_GEOMETRY_REQUIRED;
+    response[4] = checksum(response, length);
+    *response_length = length;
+    return FN_OK;
+}
+
 uint8_t fn_raw_call(uint8_t device, uint8_t command, const void *payload,
                     uint16_t payload_length, void *reply,
                     uint16_t reply_capacity, fn_raw_response_t *response)
@@ -126,6 +145,17 @@ int main(void)
         inspection.media.sector_count != 3520 ||
         inspection.boot_length != 4 || memcmp(inspection.boot_bytes, "DOS\0", 4) != 0) {
         puts("interleaved DiskDevice contexts crossed state");
+        return 1;
+    }
+    /* Each context reports why its own last call failed. */
+    if (fn_disk_last_error_context(&first) != FN_DISK_ERR_NONE ||
+        fn_disk_context_init(&second, geometry_required_exchange, NULL) != FN_OK ||
+        fn_disk_mount_context(&second, 1, "mem:/dos33.dsk", 1, FN_DISK_TYPE_AUTO, 0,
+                              &info) != FN_ERR_INVALID ||
+        fn_disk_last_error_context(&second) != FN_DISK_ERR_GEOMETRY_REQUIRED ||
+        fn_disk_last_error_context(&first) != FN_DISK_ERR_NONE ||
+        fn_disk_last_error_context(NULL) != FN_DISK_ERR_UNREPORTED) {
+        puts("DiskDevice context last error mismatch");
         return 1;
     }
     puts("independent DiskDevice contexts remain isolated");

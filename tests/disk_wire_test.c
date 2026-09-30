@@ -10,6 +10,7 @@ static uint8_t last_command;
 static uint8_t last_payload[1024];
 static uint16_t last_payload_length;
 static uint8_t response_status;
+static int response_disk_error = -1; /* failure payload {1, error} when >= 0 */
 static uint16_t info_response_length = 13;
 
 static void put_u16le(uint8_t *p, uint16_t value)
@@ -43,7 +44,14 @@ uint8_t fn_raw_call(uint8_t device, uint8_t command,
     memcpy(last_payload, payload, payload_length);
     response->status = response_status;
     response->payload_length = 0;
-    if (response_status != 0) return FN_OK;
+    if (response_status != 0) {
+        if (response_disk_error >= 0 && reply_capacity >= 2) {
+            out[0] = 1;
+            out[1] = (uint8_t)response_disk_error;
+            response->payload_length = 2;
+        }
+        return FN_OK;
+    }
     if (device != FN_DEVICE_DISK || payload_length < 2) return FN_ERR_INVALID;
 
     switch (command) {
@@ -124,6 +132,32 @@ static int test_mount_passes_explicit_type(void)
     return 0;
 }
 
+static int test_last_error_reports_why(void)
+{
+    fn_disk_info_t info;
+
+    /* A failure NIO explains: the transport status, then the exact reason. */
+    response_status = 2; /* InvalidRequest */
+    response_disk_error = FN_DISK_ERR_GEOMETRY_REQUIRED;
+    if (fn_disk_mount(1, "host:/apple2/dos33.dsk", 1, FN_DISK_TYPE_AUTO, 0, &info) != FN_ERR_INVALID ||
+        fn_disk_last_error() != FN_DISK_ERR_GEOMETRY_REQUIRED) { puts("geometry-required mismatch"); return 1; }
+
+    /* The client supplies the geometry and the mount succeeds. */
+    response_status = 0;
+    response_disk_error = -1;
+    if (fn_disk_mount(1, "host:/apple2/dos33.dsk", 1, FN_DISK_TYPE_RAW, 256, &info) != FN_OK ||
+        last_payload[4] != 0x00 || last_payload[5] != 0x01 ||
+        fn_disk_last_error() != FN_DISK_ERR_NONE) { puts("hinted mount mismatch"); return 1; }
+
+    /* A failure without a disk error (older NIO): not mistaken for success. */
+    response_status = 4; /* NotReady */
+    if (fn_disk_info(1, &info) != FN_ERR_NOT_READY ||
+        fn_disk_last_error() != FN_DISK_ERR_UNREPORTED) { puts("unreported mismatch"); return 1; }
+
+    response_status = 0;
+    return 0;
+}
+
 static int test_validation_and_status(void)
 {
     uint8_t data[4];
@@ -198,6 +232,7 @@ static int test_protocol_vectors(void)
 int main(void)
 {
     if (test_mount_info_read_write() || test_mount_passes_explicit_type() ||
+        test_last_error_reports_why() ||
         test_validation_and_status() ||
         test_info_response_with_optional_last_error() ||
         test_info_response_without_optional_last_error() ||
