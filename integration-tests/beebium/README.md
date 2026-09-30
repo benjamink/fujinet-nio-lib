@@ -96,7 +96,7 @@ Two repo roots plus fn-rom for the sideways ROM image:
 |----------|:--------:|---------|
 | `BEEBIUM_HOME` | yes | beebium repo root |
 | `FUJINET_NIO_HOME` | yes | fujinet-nio repo root (`fujinet_tools` derived from `py/`) |
-| `FN_ROM_HOME` | yes | fn-rom repo root (`build/fujinet.rom` derived after `make net`) |
+| `FN_ROM_HOME` | yes | fn-rom repo root (`build/fujinet.rom` derived after `make`) |
 | `BEEBIUM_SERVER` | derived | `beebium-model-b` |
 | `BEEBIUM_MOS` / `BEEBIUM_BASIC` | derived | ROMs under `$BEEBIUM_HOME/roms/` |
 | `BEEBIUM_PYTHON` | no | Python 3.12+ interpreter for the current Beebium client |

@@ -6,7 +6,7 @@ Build the library and fn-rom sideways ROM, set three paths, run tests:
 
 ```bash
 make bbc
-make -C /path/to/fn-rom net   # produces build/fujinet.rom
+make -C /path/to/fn-rom       # produces build/fujinet.rom
 
 export BEEBIUM_HOME=/path/to/beebium
 export FUJINET_NIO_HOME=/path/to/fujinet-nio
@@ -34,7 +34,7 @@ Override any derived path with the usual env var if autodetection fails.
 - **cc65** (`cl65`) — compile BBC smoke apps in tests
 - **beebium** built (`beebium-model-b` under your `BEEBIUM_HOME` checkout)
 - **dfstool** — SSD images for disc-based smoke tests
-- **fn-rom** built (`make net` in your `FN_ROM_HOME` checkout)
+- **fn-rom** built (`make` in your `FN_ROM_HOME` checkout)
 
 Optional for future `real/` interop tests: build fujinet-nio and set `FUJINET_BIN`.
 

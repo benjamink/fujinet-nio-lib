@@ -177,7 +177,7 @@ def resolve_fn_rom() -> Path:
     if found.is_file():
         return found
     _exit(
-        f"FN_ROM not set and {found} not found — build fn-rom (make net) or set FN_ROM"
+        f"FN_ROM not set and {found} not found — build fn-rom (make) or set FN_ROM"
     )
 
 
