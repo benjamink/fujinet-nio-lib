@@ -11,6 +11,7 @@ enum {
     FN_DISK_CMD_WRITE_SECTOR = 0x04,
     FN_DISK_CMD_INFO = 0x05,
     FN_DISK_CMD_CLEAR_CHANGED = 0x06,
+    FN_DISK_CMD_RESTORE_BOOT = 0x0A,
     FN_DISK_CMD_FLUSH = 0x0E,
     FN_DISK_CMD_INSPECT = 0x0F
 };
@@ -295,6 +296,20 @@ uint8_t fn_disk_info_context(fn_disk_client_context_t *context, uint8_t slot,
     return parse_info(context->codec_scratch, reply_length, info);
 }
 
+uint8_t fn_disk_restore_boot_context(fn_disk_client_context_t *context,
+                                     uint8_t slot, fn_disk_info_t *info)
+{
+    uint16_t reply_length = 0;
+    uint8_t result;
+    if (context == NULL || info == NULL) return FN_ERR_INVALID;
+    context->codec_scratch[0] = FN_DISK_PROTOCOL_VERSION;
+    context->codec_scratch[1] = slot;
+    result = context_disk_call(context, FN_DISK_CMD_RESTORE_BOOT, 2,
+                               &reply_length);
+    if (result != FN_OK) return result;
+    return parse_info(context->codec_scratch, reply_length, info);
+}
+
 uint8_t fn_disk_inspect_context(fn_disk_client_context_t *context,
                                 const char *uri, uint8_t type,
                                 uint16_t sector_size_hint,
@@ -455,6 +470,24 @@ uint8_t fn_disk_mount(uint8_t slot, const char *uri, uint8_t readonly,
         info->last_error = 0;
     }
     return FN_OK;
+}
+
+uint8_t fn_disk_restore_boot(uint8_t slot, fn_disk_info_t *info)
+{
+#if !defined(__CC65__)
+    uint8_t disk_request[2];
+    uint8_t disk_reply[16];
+#endif
+    uint16_t reply_length = 0;
+    uint8_t result;
+
+    if (!info) return FN_ERR_INVALID;
+    disk_request[0] = FN_DISK_PROTOCOL_VERSION;
+    disk_request[1] = slot;
+    result = disk_call(FN_DISK_CMD_RESTORE_BOOT, disk_request, 2,
+                       disk_reply, sizeof(disk_reply), &reply_length);
+    if (result != FN_OK) return result;
+    return parse_info(disk_reply, reply_length, info);
 }
 
 uint8_t fn_disk_unmount(uint8_t slot)

@@ -56,6 +56,7 @@ uint8_t fn_raw_call(uint8_t device, uint8_t command,
 
     switch (command) {
         case 0x01:
+        case 0x0A:
             if (reply_capacity < 12) return FN_ERR_INVALID;
             out[0] = 1; out[1] = 1; out[2] = 0; out[3] = 0; out[4] = in[1];
             out[5] = FN_DISK_TYPE_RAW; put_u16le(out + 6, 512);
@@ -118,6 +119,8 @@ static int test_mount_info_read_write(void)
         last_payload_length != 2 || last_payload[0] != 1 ||
         last_payload[1] != 1) { puts("flush mismatch"); return 1; }
     if (fn_disk_unmount(1) != FN_OK) { puts("unmount mismatch"); return 1; }
+    if (fn_disk_restore_boot(1, &info) != FN_OK || last_command != 0x0A ||
+        last_payload_length != 2 || info.slot != 1) { puts("restore mismatch"); return 1; }
     return 0;
 }
 

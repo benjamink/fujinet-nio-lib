@@ -441,6 +441,9 @@ uint8_t fn_disk_context_init(fn_disk_client_context_t *context,
 uint8_t fn_disk_mount_context(fn_disk_client_context_t *context, uint8_t slot,
                               const char *uri, uint8_t readonly, uint8_t type,
                               uint16_t sector_size_hint, fn_disk_info_t *info);
+/* Restore the firmware-configured default image into a 1-based slot. */
+uint8_t fn_disk_restore_boot_context(fn_disk_client_context_t *context,
+                                     uint8_t slot, fn_disk_info_t *info);
 uint8_t fn_disk_info_context(fn_disk_client_context_t *context, uint8_t slot,
                              fn_disk_info_t *info);
 uint8_t fn_disk_read_sector_context(fn_disk_client_context_t *context,
@@ -472,6 +475,7 @@ uint8_t fn_disk_inspect_context(fn_disk_client_context_t *context,
 uint8_t fn_disk_mount(uint8_t slot, const char *uri, uint8_t readonly,
                       uint8_t type, uint16_t sector_size_hint,
                       fn_disk_info_t *info);
+uint8_t fn_disk_restore_boot(uint8_t slot, fn_disk_info_t *info);
 
 /**
  * FN_DISK_ERR_* for the most recent fn_disk_*() call: FN_DISK_ERR_NONE after
