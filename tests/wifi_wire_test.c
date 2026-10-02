@@ -12,6 +12,8 @@ static uint8_t last_command;
 static uint8_t last_payload[256];
 static uint16_t last_payload_len;
 static unsigned call_count;
+static uint8_t adapter_status;
+static uint8_t adapter_firmware_len_override;
 
 static void put_string(uint8_t *out, uint16_t *at, const char *value)
 {
@@ -83,6 +85,22 @@ uint8_t fn_raw_call(uint8_t device,
         out[at++] = 1;
         put_string(out, &at, "test-network");
         put_string(out, &at, "00:11:22:33:44:55");
+        response->payload_length = at;
+        return FN_OK;
+    }
+
+    if (command == FN_WIFI_CMD_GET_ADAPTER_INFO) {
+        if (payload_length != 1 || last_payload[0] != FN_WIFI_PROTOCOL_VERSION)
+            return FN_ERR_INVALID;
+        response->status = adapter_status;
+        if (adapter_status) return FN_OK;
+        if (reply_capacity < 9 + 6) return FN_ERR_INVALID;
+        out[at++] = FN_WIFI_PROTOCOL_VERSION;
+        out[at++] = 1;
+        out[at++] = 0x24; out[at++] = 0x6F; out[at++] = 0x28;
+        out[at++] = 0x01; out[at++] = 0x02; out[at++] = 0x03;
+        put_string(out, &at, "0.1.1");
+        if (adapter_firmware_len_override) out[8] = adapter_firmware_len_override;
         response->payload_length = at;
         return FN_OK;
     }
@@ -189,11 +207,38 @@ static int test_scan_and_boundaries(void)
     return 0;
 }
 
+static int test_adapter_info(void)
+{
+    fn_wifi_adapter_info_t info;
+
+    reset_call();
+    adapter_status = 0;
+    adapter_firmware_len_override = 0;
+    if (fn_wifi_get_adapter_info(&info) != FN_OK) return 1;
+    if (last_command != FN_WIFI_CMD_GET_ADAPTER_INFO || last_payload_len != 1) return 1;
+    if (!info.mac.valid || info.mac.bytes[0] != 0x24 || info.mac.bytes[5] != 0x03) return 1;
+    if (strcmp(info.firmware, "0.1.1") != 0) return 1;
+
+    /* Firmware without the command answers Unsupported (wire status 8). */
+    adapter_status = 8;
+    if (fn_wifi_get_adapter_info(&info) != FN_ERR_UNSUPPORTED) return 1;
+
+    /* A length byte that disagrees with the payload is rejected. */
+    adapter_status = 0;
+    adapter_firmware_len_override = 9;
+    if (fn_wifi_get_adapter_info(&info) != FN_ERR_IO) return 1;
+    adapter_firmware_len_override = 0;
+
+    if (fn_wifi_get_adapter_info(0) != FN_ERR_INVALID) return 1;
+    return 0;
+}
+
 int main(void)
 {
     if (test_status()) { puts("wifi status wire test failed"); return 1; }
     if (test_config_and_set()) { puts("wifi config wire test failed"); return 1; }
     if (test_scan_and_boundaries()) { puts("wifi scan wire test failed"); return 1; }
+    if (test_adapter_info()) { puts("wifi adapter info wire test failed"); return 1; }
     puts("wifi wire tests passed");
     return 0;
 }

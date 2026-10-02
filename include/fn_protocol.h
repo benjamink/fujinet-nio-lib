@@ -91,6 +91,7 @@ extern "C" {
 #define FN_WIFI_CMD_GET_CONFIG   0x02
 #define FN_WIFI_CMD_SET_CONFIG   0x03
 #define FN_WIFI_CMD_SCAN         0x04
+#define FN_WIFI_CMD_GET_ADAPTER_INFO 0x05
 
 /* ============================================================================
  * Clock Device Commands

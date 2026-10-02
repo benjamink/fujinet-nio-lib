@@ -115,6 +115,7 @@ extern "C" {
 #define FN_WIFI_MAX_BSSID     17
 #define FN_WIFI_MAX_PASSWORD  64
 #define FN_WIFI_MAX_SCAN_RECORDS 32
+#define FN_WIFI_MAX_FIRMWARE_VERSION 32
 #define FN_WIFI_SCAN_RESPONSE_HEADER_SIZE 3
 #define FN_WIFI_SCAN_RECORD_WIRE_MAX (1 + FN_WIFI_MAX_SSID + 9)
 #define FN_WIFI_SCAN_RESPONSE_MAX \
@@ -164,11 +165,18 @@ typedef struct {
     int8_t rssi;
     uint8_t channel, auth;
 } fn_wifi_scan_record_t;
+typedef struct {
+    fn_wifi_bssid_t mac;    /* station interface MAC; mac.valid=0 when unknown */
+    char firmware[FN_WIFI_MAX_FIRMWARE_VERSION + 1];
+} fn_wifi_adapter_info_t;
 
 /* Password input is consumed during the call and is never returned. */
 uint8_t fn_wifi_get_status(fn_wifi_status_t *status);
 uint8_t fn_wifi_get_config(fn_wifi_config_t *config);
 uint8_t fn_wifi_set_config(const fn_wifi_config_update_t *update);
+/* Station MAC and firmware version. Firmware that predates the command
+ * returns FN_ERR_UNSUPPORTED; callers should show the fields as unknown. */
+uint8_t fn_wifi_get_adapter_info(fn_wifi_adapter_info_t *info);
 /* offset is a record index; limit/capacity are bounded to 32 records and
  * count is the number written to records. response_buffer is caller-owned
  * scratch storage used for the wire response. The helper reduces the wire
