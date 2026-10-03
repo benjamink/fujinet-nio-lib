@@ -196,6 +196,11 @@ Current BBC notes:
   - Pattern suitable for games and interactive applications
   - Statistics tracking (frames received, bytes, timing)
 
+- **img_translate** (Linux only) - Image translation via `fn_open_translated()`:
+  - `./bin/linux/img_translate <url> <selector> > out.iff`
+  - Selector example: `fmt=ilbm,w=640,h=400,colors=16`
+  - Writes the translated bytes to stdout
+
 ### Disk Examples (`disk/`) - Planned
 
 Examples for disk device operations.
