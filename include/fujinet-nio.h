@@ -164,11 +164,30 @@ typedef struct {
     int8_t rssi;
     uint8_t channel, auth;
 } fn_wifi_scan_record_t;
+typedef struct {
+    fn_wifi_bssid_t mac;    /* station interface MAC; mac.valid=0 when unknown */
+} fn_wifi_adapter_info_t;
 
 /* Password input is consumed during the call and is never returned. */
 uint8_t fn_wifi_get_status(fn_wifi_status_t *status);
 uint8_t fn_wifi_get_config(fn_wifi_config_t *config);
 uint8_t fn_wifi_set_config(const fn_wifi_config_update_t *update);
+/* Station MAC. Firmware that predates the command returns
+ * FN_ERR_UNSUPPORTED; callers should show the MAC as unknown. The firmware
+ * version comes from fn_fuji_get_info(). */
+uint8_t fn_wifi_get_adapter_info(fn_wifi_adapter_info_t *info);
+
+/* FujiDevice: describes the FujiNet itself. No network is involved, so the
+ * call answers quickly on any board. */
+#define FN_FUJI_MAX_FIRMWARE_VERSION 32
+#define FN_FUJI_MAX_BUILD_PROFILE    64
+typedef struct {
+    char firmware[FN_FUJI_MAX_FIRMWARE_VERSION + 1];   /* e.g. "0.1.1" */
+    char profile[FN_FUJI_MAX_BUILD_PROFILE + 1];       /* build profile name */
+} fn_fuji_info_t;
+/* Firmware version and build profile. Firmware that predates the command
+ * returns FN_ERR_UNSUPPORTED; callers should show the fields as unknown. */
+uint8_t fn_fuji_get_info(fn_fuji_info_t *info);
 /* offset is a record index; limit/capacity are bounded to 32 records and
  * count is the number written to records. response_buffer is caller-owned
  * scratch storage used for the wire response. The helper reduces the wire
