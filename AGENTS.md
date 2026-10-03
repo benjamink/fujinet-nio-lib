@@ -56,6 +56,22 @@ means file boundaries matter.
    rewriting, prefer isolating those helpers into their own files or making the
    calling path explicit.
 
+## Adding a client call
+
+Follow the conventions of recent calls such as `fn_fuji_get_info`.
+
+1. One externally-useful function per source file (see the Archive/linking
+   rules above).
+2. When BBC needs a different path, add its implementation in
+   `src/platform/bbc/` beside the common one.
+3. Reference every new public call in `tests/library_link_test.c`.
+4. Give every new wire test a `tests/run_*_test.sh` and a Makefile target
+   listed in `test:`, so `make check` runs it.
+5. For fujinet-nio commands that can grow, follow fujinet-nio
+   `docs/protocol_reference.md` "Extending commands": request the highest
+   version the library understands, accept a reply at that version or lower,
+   and treat a malformed reply as an error, never a partial result.
+
 ## BBC implementation strategy
 
 The BBC target is ROM-backed.

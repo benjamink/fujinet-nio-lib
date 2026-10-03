@@ -100,5 +100,7 @@ int main(void)
     /* Adapter details: link from the archive, not just the wire tests. */
     (void)&fn_fuji_get_info;
     (void)&fn_wifi_get_adapter_info;
+    /* Open with content translation: its own archive member. */
+    (void)&fn_open_translated;
     return 0;
 }

@@ -134,6 +134,10 @@ CFLAGS += -I$(INCDIR)
 # Network examples (TCP/HTTP/TLS)
 NETWORK_EXAMPLES := http_get tcp_get tcp_stream
 
+ifeq ($(TARGET),linux)
+NETWORK_EXAMPLES += img_translate
+endif
+
 ifneq ($(filter $(TARGET),bbc bbc-clib),)
 NETWORK_EXAMPLES := http_get tcp_get
 endif
