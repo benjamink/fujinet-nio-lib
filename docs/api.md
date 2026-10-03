@@ -399,6 +399,9 @@ request carries the extension block (`u32 openExtFlags = 1`, `u8 type`,
 the packet is byte-identical to `fn_open()`. Example image selector:
 `"w=624,h=190,colors=12,base=4,par=1:2"`.
 
+Firmware that does not implement the requested translation type returns
+`FN_ERR_INVALID` from the open.
+
 On BBC, any translation type other than `FN_TRANSLATE_NONE` returns
 `FN_ERR_UNSUPPORTED`.
 
