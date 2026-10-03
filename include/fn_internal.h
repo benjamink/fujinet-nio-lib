@@ -69,6 +69,17 @@ int8_t fn_find_free_slot(void);
  * fn_open_translated().
  */
 uint8_t fn_open_exchange(fn_handle_t *handle, uint16_t req_len);
+
+/**
+ * Validate fn_open()-style arguments (initialised, non-NULL handle and url,
+ * URL length) and map the public FN_OPEN_* flags to the wire flags. Returns
+ * FN_OK and stores the wire flags, or an FN_ERR_* code. Shared by fn_open()
+ * and fn_open_translated().
+ */
+uint8_t fn_open_prepare(const fn_handle_t *handle,
+                        const char *url,
+                        uint8_t flags,
+                        uint8_t *wire_flags);
 int8_t fn_find_session(fn_handle_t handle);
 void fn_free_handle(fn_handle_t handle);
 
