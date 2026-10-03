@@ -94,6 +94,17 @@ extern "C" {
 #define FN_WIFI_CMD_GET_ADAPTER_INFO 0x05
 
 /* ============================================================================
+ * FujiDevice Commands
+ * ============================================================================ */
+
+/** Firmware version and build profile */
+#define FN_FUJI_CMD_GET_INFO     0x01
+/** Highest GetInfo version this library understands. GetInfo and Wi-Fi
+ *  GET_ADAPTER_INFO negotiate: the firmware replies in the lower of the
+ *  requested version and its own, so newer and older sides interoperate. */
+#define FN_FUJI_PROTOCOL_VERSION 1
+
+/* ============================================================================
  * Clock Device Commands
  * ============================================================================ */
 

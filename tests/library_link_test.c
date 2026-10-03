@@ -97,5 +97,8 @@ int main(void)
     (void)&fn_disk_flush_context;
     (void)&fn_disk_unmount_context;
     (void)&fn_disk_clear_changed_context;
+    /* Adapter details: link from the archive, not just the wire tests. */
+    (void)&fn_fuji_get_info;
+    (void)&fn_wifi_get_adapter_info;
     return 0;
 }
