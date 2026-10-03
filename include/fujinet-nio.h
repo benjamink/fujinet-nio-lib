@@ -641,9 +641,12 @@ uint8_t fn_open_long(fn_handle_t *handle,
                      const char *url,
                      uint8_t flags);
 
-/* Content translation types for fn_open_translated(). */
+/* Content translation types for fn_open_translated(). FN_TRANSLATE_IMAGE is
+   image translation, with the output format chosen by the selector. */
 #define FN_TRANSLATE_NONE  0
 #define FN_TRANSLATE_JSON  1
+#define FN_TRANSLATE_XML   2
+#define FN_TRANSLATE_RSS   3
 #define FN_TRANSLATE_IMAGE 4
 
 /**
@@ -651,8 +654,8 @@ uint8_t fn_open_long(fn_handle_t *handle,
  *
  * Sends the Open-extension block (translation type, flags, selector) after the
  * standard Open fields. With FN_TRANSLATE_NONE the packet is identical to
- * `fn_open()`. For FN_TRANSLATE_IMAGE the selector describes the target format,
- * e.g. "w=624,h=190,colors=12,base=4,par=1:2".
+ * `fn_open()`. For FN_TRANSLATE_IMAGE the selector chooses the output format and
+ * its parameters, e.g. "fmt=ilbm,w=624,h=190,colors=12,base=4,par=1:2".
  *
  * On BBC, any type other than FN_TRANSLATE_NONE returns FN_ERR_UNSUPPORTED.
  *
