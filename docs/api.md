@@ -396,11 +396,17 @@ uint8_t fn_open_translated(fn_handle_t *handle,
 `FN_TRANSLATE_XML` (2), `FN_TRANSLATE_RSS` (3) or `FN_TRANSLATE_IMAGE` (4).
 `FN_TRANSLATE_IMAGE` is image translation; the selector chooses the output
 format (`fmt=`, currently only `ilbm`, which is the default) and its
-parameters, including `bits=` (palette bits per channel, 1 to 8, default 4). For any type other than `FN_TRANSLATE_NONE` the Open
-request carries the extension block (`u32 openExtFlags = 1`, `u8 type`,
-`u8 flags`, `u16 LE selectorLen`, selector bytes). With `FN_TRANSLATE_NONE`,
-the packet is byte-identical to `fn_open()`. Example image selector:
-`"fmt=ilbm,w=624,h=190,colors=12,base=4,par=1:2"`.
+parameters, including `bits=` (palette bits per channel, 1 to 8, default 4).
+Leave out keys whose value is the default: firmware rejects keys it does not
+know, so a selector that names only what it changes works with the most
+firmware (see fujinet-nio `docs/network_device_protocol.md`, "Image
+translation").
+
+For any type other than `FN_TRANSLATE_NONE` the Open request carries the
+extension block (`u32 openExtFlags = 1`, `u8 type`, `u8 flags`,
+`u16 LE selectorLen`, selector bytes). With `FN_TRANSLATE_NONE`, the packet
+is byte-identical to `fn_open()`. Example image selector:
+`"w=624,h=190,colors=12,base=4,par=1:2"`.
 
 Firmware without the requested translation type rejects the open with
 `FN_ERR_INVALID` (the same code is returned for invalid arguments).

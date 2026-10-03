@@ -655,7 +655,8 @@ uint8_t fn_open_long(fn_handle_t *handle,
  * Sends the Open-extension block (translation type, flags, selector) after the
  * standard Open fields. With FN_TRANSLATE_NONE the packet is identical to
  * `fn_open()`. For FN_TRANSLATE_IMAGE the selector chooses the output format and
- * its parameters, e.g. "fmt=ilbm,w=624,h=190,colors=12,base=4,par=1:2".
+ * its parameters, e.g. "w=624,h=190,colors=12,base=4,par=1:2" (default
+ * keys such as fmt=ilbm are best left out, for older firmware).
  *
  * On BBC, any type other than FN_TRANSLATE_NONE returns FN_ERR_UNSUPPORTED.
  *

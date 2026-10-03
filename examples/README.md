@@ -198,7 +198,7 @@ Current BBC notes:
 
 - **img_translate** (Linux only) - Image translation via `fn_open_translated()`:
   - `./bin/linux/img_translate <url> <selector> > out.iff`
-  - Selector example: `fmt=ilbm,w=640,h=400,colors=16`
+  - Selector example: `w=640,h=400,colors=16` (`fmt=ilbm` is the default)
   - Writes the translated bytes to stdout
 
 ### Disk Examples (`disk/`) - Planned

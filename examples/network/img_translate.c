@@ -1,6 +1,6 @@
 /* examples/network/img_translate.c
  * usage: img_translate <url> <selector> > out.iff
- * e.g.   img_translate https://example.com/a.png fmt=ilbm,w=640,h=400,colors=16 > a.iff
+ * e.g.   img_translate https://example.com/a.png w=640,h=400,colors=16 > a.iff
  */
 #define _DEFAULT_SOURCE /* usleep() under -std=c99 */
 #include <stdio.h>
@@ -47,6 +47,11 @@ int main(int argc, char **argv)
         if (err != FN_OK) {
             fprintf(stderr, "read: %s after %lu bytes written\n",
                     fn_error_string(err), (unsigned long)off);
+            if (err == FN_ERR_INVALID && off == 0) {
+                /* The firmware could not decode the body: not an image, or
+                   an error page such as a 404. */
+                fprintf(stderr, "the response is not an image the firmware can read; check the URL\n");
+            }
             break;
         }
         fwrite(buf, 1, n, stdout);
