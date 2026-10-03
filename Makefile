@@ -135,7 +135,7 @@ test-session:
 
 test-open-ext:
 	@echo "Running Open-extension wire test..."
-	sh ./tests/run_open_ext_wire_test.sh
+	bash ./tests/run_open_ext_wire_test.sh
 
 test-library-link: linux
 	@echo "Running public API library-link test..."

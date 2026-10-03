@@ -19,6 +19,14 @@ int main(void)
 
     lb = fn_build_open_packet_ext(b, FN_METHOD_GET, 0x02, url, FN_TRANSLATE_IMAGE, 0, sel);
     CHECK(lb == (uint16_t)(la + 4 + 1 + 1 + 2 + strlen(sel)));
+    CHECK((b[2] | (b[3] << 8)) == lb);                  /* header length field */
+    {   /* checksum: the stored byte matches the library's calculation (which skips offset 4) */
+        uint8_t saved = b[FN_CHECKSUM_OFFSET];
+        CHECK(saved == fn_calc_packet_checksum(b, lb));
+        b[FN_CHECKSUM_OFFSET] = (uint8_t)(saved ^ 0xFF);   /* the checksum byte must not affect the sum */
+        CHECK(saved == fn_calc_packet_checksum(b, lb));
+        b[FN_CHECKSUM_OFFSET] = saved;
+    }
     base = la;                                          /* ext block starts where legacy packet ended */
     CHECK(b[base] == 1 && b[base+1] == 0 && b[base+2] == 0 && b[base+3] == 0);
     CHECK(b[base+4] == FN_TRANSLATE_IMAGE);
