@@ -1,6 +1,6 @@
-#!/bin/sh
+#!/usr/bin/env bash
 # tests/run_open_ext_wire_test.sh
-set -eu
+set -euo pipefail
 mkdir -p build/tests
 gcc -std=c99 -Wall -Wextra -Werror -Iinclude \
     tests/open_ext_wire_test.c \
