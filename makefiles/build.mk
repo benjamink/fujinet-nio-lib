@@ -41,6 +41,7 @@ COMMON_SRCS_DEFAULT := $(SRCDIR)/common/fn_slip.c \
                        $(SRCDIR)/common/fn_packet_checksum_packet.c \
                        $(SRCDIR)/common/fn_packet_header.c \
                        $(SRCDIR)/common/fn_packet_build_open.c \
+                       $(SRCDIR)/common/fn_packet_build_open_ext.c \
                        $(SRCDIR)/common/fn_packet_build_rw.c \
                        $(SRCDIR)/common/fn_packet_build_misc.c \
                        $(SRCDIR)/common/fn_packet_parse_common.c \
@@ -51,6 +52,7 @@ COMMON_SRCS_DEFAULT := $(SRCDIR)/common/fn_slip.c \
                        $(SRCDIR)/common/fn_init.c \
                        $(SRCDIR)/common/fn_shutdown.c \
                        $(SRCDIR)/common/fn_open.c \
+                       $(SRCDIR)/common/fn_open_translated.c \
                        $(SRCDIR)/common/fn_rw.c \
                        $(SRCDIR)/common/fn_info_close.c \
                        $(SRCDIR)/common/fn_util.c \

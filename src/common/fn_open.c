@@ -3,46 +3,12 @@
 #include "fn_internal.h"
 #include "fn_platform.h"
 
-uint8_t fn_open(fn_handle_t *handle,
-                uint8_t method,
-                const char *url,
-                uint8_t flags)
+/* Shared by fn_open() and fn_open_translated(): send the request already built in
+   _fn_req_buf, parse the Open reply and record the session slot. */
+uint8_t fn_open_exchange(fn_handle_t *handle, uint16_t req_len)
 {
-    uint16_t req_len;
     uint8_t result;
-    uint8_t open_flags;
     int8_t slot;
-
-    if (!_fn_initialized) {
-        return FN_ERR_INVALID;
-    }
-
-    if (handle == NULL || url == NULL) {
-        return FN_ERR_INVALID;
-    }
-
-    if (strlen(url) > FN_MAX_URL_LEN) {
-        return FN_ERR_URL_TOO_LONG;
-    }
-
-    open_flags = 0;
-    if (flags & FN_OPEN_FOLLOW_REDIR) {
-        open_flags |= FN_OPEN_FLAG_FOLLOW_REDIR;
-    }
-    if (flags & FN_OPEN_BODY_UNKNOWN) {
-        open_flags |= FN_OPEN_FLAG_BODY_UNKNOWN;
-    }
-    if (flags & FN_OPEN_ALLOW_EVICT) {
-        open_flags |= FN_OPEN_FLAG_ALLOW_EVICT;
-    }
-    if (flags & FN_OPEN_STREAM_NO_PROBE) {
-        open_flags |= FN_OPEN_FLAG_STREAM_NO_PROBE;
-    }
-
-    req_len = fn_build_open_packet(_fn_req_buf, method, open_flags, url);
-    if (req_len == 0) {
-        return FN_ERR_INVALID;
-    }
 
     _fn_transport_ctx.request = _fn_req_buf;
     _fn_transport_ctx.req_len = req_len;
@@ -80,6 +46,48 @@ uint8_t fn_open(fn_handle_t *handle,
     }
 
     return FN_OK;
+}
+
+uint8_t fn_open(fn_handle_t *handle,
+                uint8_t method,
+                const char *url,
+                uint8_t flags)
+{
+    uint16_t req_len;
+    uint8_t open_flags;
+
+    if (!_fn_initialized) {
+        return FN_ERR_INVALID;
+    }
+
+    if (handle == NULL || url == NULL) {
+        return FN_ERR_INVALID;
+    }
+
+    if (strlen(url) > FN_MAX_URL_LEN) {
+        return FN_ERR_URL_TOO_LONG;
+    }
+
+    open_flags = 0;
+    if (flags & FN_OPEN_FOLLOW_REDIR) {
+        open_flags |= FN_OPEN_FLAG_FOLLOW_REDIR;
+    }
+    if (flags & FN_OPEN_BODY_UNKNOWN) {
+        open_flags |= FN_OPEN_FLAG_BODY_UNKNOWN;
+    }
+    if (flags & FN_OPEN_ALLOW_EVICT) {
+        open_flags |= FN_OPEN_FLAG_ALLOW_EVICT;
+    }
+    if (flags & FN_OPEN_STREAM_NO_PROBE) {
+        open_flags |= FN_OPEN_FLAG_STREAM_NO_PROBE;
+    }
+
+    req_len = fn_build_open_packet(_fn_req_buf, method, open_flags, url);
+    if (req_len == 0) {
+        return FN_ERR_INVALID;
+    }
+
+    return fn_open_exchange(handle, req_len);
 }
 
 uint8_t fn_tcp_open(fn_handle_t *handle,

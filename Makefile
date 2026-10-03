@@ -22,7 +22,7 @@ override PROGRAM := fujinet-nio
 # Phony targets
 .PHONY: all clean help disk-bbc disk-bbc-clib test-legacy test-mount-resolve \
 	test-appstore-read test-slot-catalog test-bbc test-bbc-scripted \
-	test-bbc-real test-fuji test-wifi test-disk test-disk-context test-session test-library-link \
+	test-bbc-real test-fuji test-wifi test-disk test-disk-context test-session test-open-ext test-library-link \
 	test-amiga-transport test \
 	test-all-build check msdos $(TARGETS) $(EXTRA_TARGETS)
 
@@ -133,6 +133,10 @@ test-session:
 	@echo "Running channel/session wire tests..."
 	bash ./tests/run_session_wire_test.sh
 
+test-open-ext:
+	@echo "Running Open-extension wire test..."
+	sh ./tests/run_open_ext_wire_test.sh
+
 test-library-link: linux
 	@echo "Running public API library-link test..."
 	bash ./tests/run_library_link_test.sh
@@ -145,7 +149,7 @@ test-all-build:
 	@echo "Building all configured library targets..."
 	$(MAKE) all
 
-test: test-library-link test-legacy test-mount-resolve test-appstore-read test-slot-catalog test-fuji test-wifi test-disk test-disk-context test-session test-amiga-transport
+test: test-library-link test-legacy test-mount-resolve test-appstore-read test-slot-catalog test-fuji test-wifi test-disk test-disk-context test-session test-open-ext test-amiga-transport
 
 # Fast required change check: compile every configured target, then run the
 # host-side tests and public archive-link test. Keep this as a recipe rather

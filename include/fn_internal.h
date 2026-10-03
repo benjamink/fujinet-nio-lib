@@ -62,6 +62,13 @@ uint16_t fn_checksum_fold(const uint8_t *data, uint16_t len,
                           uint16_t checksum);
 
 int8_t fn_find_free_slot(void);
+
+/**
+ * Send the Open request already built in _fn_req_buf (req_len bytes), parse
+ * the reply and record the session slot. Shared by fn_open() and
+ * fn_open_translated().
+ */
+uint8_t fn_open_exchange(fn_handle_t *handle, uint16_t req_len);
 int8_t fn_find_session(fn_handle_t handle);
 void fn_free_handle(fn_handle_t handle);
 
@@ -112,6 +119,19 @@ uint16_t fn_build_open_packet(uint8_t *buffer,
                                uint8_t method,
                                uint8_t flags,
                                const char *url);
+
+/**
+ * Build an Open request packet, optionally with the content-translation
+ * extension block (appended only when ttype != FN_TRANSLATE_NONE).
+ * Returns 0 on overflow.
+ */
+uint16_t fn_build_open_packet_ext(uint8_t *buffer,
+                                  uint8_t method,
+                                  uint8_t flags,
+                                  const char *url,
+                                  uint8_t ttype,
+                                  uint8_t tflags,
+                                  const char *selector);
 
 /**
  * Build a Read request packet.

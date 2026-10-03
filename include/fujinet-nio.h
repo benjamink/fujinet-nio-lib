@@ -641,6 +641,38 @@ uint8_t fn_open_long(fn_handle_t *handle,
                      const char *url,
                      uint8_t flags);
 
+/* Content translation types for fn_open_translated(). */
+#define FN_TRANSLATE_NONE  0
+#define FN_TRANSLATE_JSON  1
+#define FN_TRANSLATE_IMAGE 4
+
+/**
+ * @brief Open a network session, asking the firmware to translate the content.
+ *
+ * Sends the Open-extension block (translation type, flags, selector) after the
+ * standard Open fields. With FN_TRANSLATE_NONE the packet is identical to
+ * `fn_open()`. For FN_TRANSLATE_IMAGE the selector describes the target format,
+ * e.g. "w=624,h=190,colors=12,base=4,par=1:2".
+ *
+ * On BBC, any type other than FN_TRANSLATE_NONE returns FN_ERR_UNSUPPORTED.
+ *
+ * @param handle            Pointer to receive the session handle
+ * @param method            HTTP method (FN_METHOD_*) or 0 for TCP
+ * @param url               URL string (null-terminated)
+ * @param flags             Open flags (FN_OPEN_*)
+ * @param translation_type  FN_TRANSLATE_*
+ * @param translation_flags Type-specific translation flags (0 if unused)
+ * @param selector          Translation selector string (may be NULL)
+ * @return FN_OK on success, error code on failure
+ */
+uint8_t fn_open_translated(fn_handle_t *handle,
+                           uint8_t method,
+                           const char *url,
+                           uint8_t flags,
+                           uint8_t translation_type,
+                           uint8_t translation_flags,
+                           const char *selector);
+
 /**
  * @brief Open a TCP connection (convenience wrapper).
  * 
