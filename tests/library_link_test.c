@@ -109,6 +109,10 @@ int main(void)
     (void)&fn_open_translated;
     if (fn_open_headers(NULL, FN_METHOD_GET, "http://example/", 0, NULL, 0, 0) != FN_ERR_INVALID) return 1;
 #ifdef __ATARI__
+    (void)&fn_atari_u1mb_pbi;
+    (void)&fn_atari_u1mb_clear_devices;
+    (void)&fn_atari_u1mb_clear_device;
+    (void)&fn_atari_u1mb_clear_disks;
     (void)&fn_atari_query_capabilities;
     (void)&fn_atari_max_payload;
     (void)&fn_atari_capability_flags;

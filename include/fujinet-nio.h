@@ -126,6 +126,11 @@ uint8_t fn_atari_capability_flags(void);
 /* ISR-safe readiness latch for an application-owned/chained VPRCED handler. */
 void fn_atari_proc_notify(void);
 
+/* Return the selected PBI bit of a compatible, selectable U1MB/Incognito
+ * PBI BIOS, or zero if none is available. This does not detect RAM alone or
+ * establish whether HSIO is enabled in the BIOS. */
+uint8_t fn_atari_u1mb_pbi(void);
+
 /* Clear selected U1MB non-disk device speed cache slots, bits 0-3.
  * The U1MB's undocumented PBI tables are detected before they are touched;
  * device IDs and disk slots are not changed. Call outside an SIO operation.
