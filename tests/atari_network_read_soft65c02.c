@@ -22,7 +22,7 @@ uint16_t fn_build_read_packet(uint8_t *buffer, fn_handle_t h, uint32_t off, uint
     if (test_case==16) return 0;
     return 15;
 }
-uint8_t fn_transport_exchange(void) {
+uint8_t test_transport_exchange(void) {
     ++transport_calls;
     if (_fn_transport_ctx.request != _fn_req_buf || _fn_transport_ctx.response != _fn_resp_buf ||
         _fn_transport_ctx.req_len != 15 || _fn_transport_ctx.resp_max != 512) bad=2;
@@ -30,11 +30,12 @@ uint8_t fn_transport_exchange(void) {
     _fn_transport_ctx.resp_len = 25;
     return FN_OK;
 }
-uint8_t fn_parse_read_response(void) {
+uint8_t test_parse_read_response(void) {
     ++parse_calls;
     if (_fn_parse_ctx.response != _fn_resp_buf || _fn_parse_ctx.resp_len != 25 ||
         _fn_parse_ctx.data != output || _fn_parse_ctx.data_max != expected_limit) bad=3;
     if (test_case == 10) return FN_ERR_INVALID;
+    if (test_case == 18) return FN_ERR_NOT_READY;
     _fn_parse_ctx.data_len = test_case == 13 ? 0 : 4;
     _fn_parse_ctx.flags = FN_READ_AVAILABLE;
     _fn_parse_ctx.available = 0x1234;
@@ -71,6 +72,7 @@ void test_func(void) {
     if (test_case==15) size=491;
     if (test_case==16) expected=FN_ERR_INVALID;
     if (test_case==17) flagp=(uint8_t *)&got;
+    if (test_case==18) expected=FN_ERR_NOT_READY;
     expected_limit = size > 490 ? 490 : size;
     result=profile_network_read(expected_handle, expected_offset, buf, size, outp, flagp);
     if (result!=expected || bad) {test_result=1; return;}
@@ -81,7 +83,7 @@ void test_func(void) {
         if (builder_calls!=1 || transport_calls || parse_calls || got || flags) {test_result=10;return;}
     } else {
         if (builder_calls!=1 || transport_calls!=1 || parse_calls!=(test_case==9?0:1)) {test_result=4;return;}
-        if (test_case==9 || test_case==10) { if (got || flags) {test_result=5;return;} }
+        if (test_case==9 || test_case==10 || test_case==18) { if (got || flags) {test_result=5;return;} }
         else {
             if (got!=(test_case==13?0:4) || (flagp && test_case!=17 && flags!=FN_READ_AVAILABLE) ||
                 fn_read_available()!=0x1234) {test_result=6;return;}

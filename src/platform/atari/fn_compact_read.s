@@ -144,6 +144,7 @@ _fn_read:
     lda #2
     sta __fn_transport_ctx+7
     jsr _fn_transport_exchange
+    cmp #0                      ; cc65 returns status in A, not the flags
     jne done
     lda #<__fn_resp_buf
     sta __fn_parse_ctx
@@ -162,6 +163,7 @@ _fn_read:
     lda count+1
     sta __fn_parse_ctx+7
     jsr _fn_parse_read_response
+    cmp #0
     jne done
     lda __fn_parse_ctx+27
     sta available

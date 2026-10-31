@@ -199,3 +199,14 @@ memory write $_test_result 0x(FF)
 run $init_harness until CP = $end_init_harness
 assert $_test_seen = 0x11 $$selected case ran$$
 assert $_test_result = 0x00 $$flags and byte count alias preserve C order$$
+
+marker $$network read not ready with unrelated return flags$$
+memory load atari "${BINARY_PATH}"
+symbols load "${SYMBOLS_PATH}"
+registers flush
+memory write $_test_case 0x(12)
+memory write $_test_seen 0x(FF)
+memory write $_test_result 0x(FF)
+run $init_harness until CP = $end_init_harness
+assert $_test_seen = 0x12 $$selected case ran$$
+assert $_test_result = 0x00 $$not ready propagates without modifying outputs$$

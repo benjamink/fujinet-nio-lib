@@ -8,6 +8,7 @@ c_flags:
 src_files:
   - atari_network_read_soft65c02.c
   - atari_network_read_profile.s
+  - atari_network_read_status_stub.s
   - ../src/common/fn_read.c
 include_paths:
   - ../include
