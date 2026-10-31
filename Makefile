@@ -225,7 +225,10 @@ test-u1mb-clear:
 test-fuji-hsio:
 	bash tests/run_fuji_hsio_test.sh
 
-test: test-fuji-hsio
+test-package-atari:
+	python3 tests/test_package_atari.py
+
+test: test-fuji-hsio test-package-atari
 
 test: test-u1mb-clear test-library-link test-legacy test-mount-resolve test-appstore-read test-list-pages test-atari-list-pages test-atari-appkey-uri test-atari-parse-read test-atari-client-buffers test-atari-network-read test-atari-network-write test-atari-network-open test-slot-catalog test-fuji test-wifi test-disk test-disk-context test-session test-open-ext test-open-wire test-ready-wire test-large-read test-write-partial test-amiga-transport test-atari-transport test-atari-hsio test-atari-proc test-atari-read-profile test-atari-compact test-raw-transport-retry
 

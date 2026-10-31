@@ -61,6 +61,24 @@ make clean
 
 ## Build Output
 
+### Standalone Atari package
+
+Build a package from a committed revision (uncommitted changes are excluded):
+
+```sh
+python3 scripts/package_atari.py --revision HEAD --version 0.1.0 \
+    --backend compact --output build/fujinet-nio-atari-0.1.0.zip
+```
+
+`--backend original` selects the original transport instead. The ZIP includes
+headers, the archive, licence notices and a manifest identifying the source
+commit, backend, compiler and archive SHA-256. The script prints the ZIP's
+SHA-256. A development package is not a published release; a release should
+be made from a reviewed, tested commit and carry the appropriate version.
+The ZIP member order and timestamps are fixed, but the cc65 archive currently
+contains build-dependent metadata, so independently rebuilt ZIPs need not be
+byte-identical. Verify the published ZIP against its recorded checksum.
+
 The build produces the following outputs:
 
 ```
