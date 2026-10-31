@@ -193,3 +193,26 @@ malformed replies, errors, and 0, 255, 256 and 260-byte reads with guards.
 For the 260-byte case the portable parser takes 5,647 cycles and the assembly
 parser 4,740, measured between the same markers. Its object is 232 bytes
 smaller in the game build; the assembly reserves four bytes of scratch.
+
+## Application-owned packet workspaces
+
+The compact Atari archive normally supplies a 512-byte request buffer and a
+512-byte response buffer. Applications may define both instead, in one C
+translation unit, and use cc65 segment pragmas or a linker configuration to
+place them in application-owned RAM:
+
+```c
+#include "fn_atari_buffers.h"
+#pragma bss-name(push, "NIO_BUFFERS")
+FN_ATARI_DEFINE_PACKET_BUFFERS();
+#pragma bss-name(pop)
+```
+
+The application must provide both buffers, and they must be writable, distinct
+and valid for the library's lifetime. They cannot safely be merged: after a
+transaction times out, the transport drains its old response before sending
+a new request that is already built in the request buffer. Without the macro,
+the existing library-owned buffers are linked as before. This placement option
+changes neither the public packet size nor the non-reentrant compact backend.
+`tests/run_atari_client_buffers_test.sh` tests both archive choices and a raw
+exchange using caller-owned storage under soft65c02.

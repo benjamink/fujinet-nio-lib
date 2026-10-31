@@ -9,6 +9,7 @@ uint8_t fn_open_exchange(fn_handle_t *handle, uint16_t req_len)
 {
     uint8_t result;
     int8_t slot;
+    fn_session_t *session;
 
     /* Reserve a local record before sending Open.  The common implementation
        is foreground/non-reentrant, so this slot remains ours through the
@@ -20,6 +21,7 @@ uint8_t fn_open_exchange(fn_handle_t *handle, uint16_t req_len)
         return FN_ERR_NO_HANDLES;
     }
 
+    session = &_fn_sessions[slot];
     _fn_transport_ctx.request = _fn_req_buf;
     _fn_transport_ctx.req_len = req_len;
     _fn_transport_ctx.response = _fn_resp_buf;
@@ -38,15 +40,15 @@ uint8_t fn_open_exchange(fn_handle_t *handle, uint16_t req_len)
     }
 
     *handle = _fn_parse_ctx.handle;
-    _fn_sessions[slot].active = 1;
-    _fn_sessions[slot].handle = _fn_parse_ctx.handle;
-    _fn_sessions[slot].proto_flags = _fn_parse_ctx.proto_flags;
-    _fn_sessions[slot].needs_body = 0;
-    _fn_sessions[slot].write_offset = 0;
-    _fn_sessions[slot].read_offset = 0;
+    session->active = 1;
+    session->handle = _fn_parse_ctx.handle;
+    session->proto_flags = _fn_parse_ctx.proto_flags;
+    session->needs_body = 0;
+    session->write_offset = 0;
+    session->read_offset = 0;
 
     if (_fn_parse_ctx.flags & FN_OPEN_RESP_NEEDS_BODY) {
-        _fn_sessions[slot].needs_body = 1;
+        session->needs_body = 1;
     }
 
     return FN_OK;

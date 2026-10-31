@@ -22,8 +22,8 @@ override PROGRAM := fujinet-nio
 # Phony targets
 .PHONY: all clean help disk-bbc disk-bbc-clib test-legacy test-mount-resolve \
 	test-appstore-read test-list-pages test-slot-catalog test-bbc test-bbc-scripted \
-	test-bbc-real test-fuji test-wifi test-disk test-disk-context test-session test-open-ext test-open-wire test-ready-wire test-library-link \
-	test-amiga-transport test-atari-transport test-atari-hsio test-atari-proc test-atari-read-profile test-atari-list-pages test-atari-appkey-uri test-atari-parse-read test-atari-compact test-raw-transport-retry test \
+	test-bbc-real test-fuji test-wifi test-disk test-disk-context test-session test-open-ext test-open-wire test-ready-wire test-write-partial test-library-link \
+	test-amiga-transport test-atari-transport test-atari-hsio test-atari-proc test-atari-read-profile test-atari-list-pages test-atari-appkey-uri test-atari-parse-read test-atari-client-buffers test-atari-compact test-raw-transport-retry test \
 	test-all-build check msdos $(TARGETS) $(EXTRA_TARGETS)
 
 # Default target: build all
@@ -121,6 +121,14 @@ test-atari-appkey-uri:
 	@echo "Running 6502 AppKey URI independent vectors..."
 	bash ./tests/run_atari_appkey_uri_test.sh
 
+test-write-partial:
+	@echo "Running sequential partial write wire vectors..."
+	bash ./tests/run_write_partial_wire_test.sh
+
+test-atari-client-buffers:
+	@echo "Running 6502 client-owned buffer and archive-link tests..."
+	bash ./tests/run_atari_client_buffers_test.sh
+
 test-atari-parse-read:
 	@echo "Running 6502 network Read parser independent vectors..."
 	bash ./tests/run_atari_parse_read_test.sh
@@ -199,7 +207,7 @@ test-all-build:
 	@echo "Building all configured library targets..."
 	$(MAKE) all
 
-test: test-library-link test-legacy test-mount-resolve test-appstore-read test-list-pages test-atari-list-pages test-atari-appkey-uri test-atari-parse-read test-slot-catalog test-fuji test-wifi test-disk test-disk-context test-session test-open-ext test-open-wire test-ready-wire test-large-read test-amiga-transport test-atari-transport test-atari-hsio test-atari-proc test-atari-read-profile test-atari-compact test-raw-transport-retry
+test: test-library-link test-legacy test-mount-resolve test-appstore-read test-list-pages test-atari-list-pages test-atari-appkey-uri test-atari-parse-read test-atari-client-buffers test-slot-catalog test-fuji test-wifi test-disk test-disk-context test-session test-open-ext test-open-wire test-ready-wire test-large-read test-write-partial test-amiga-transport test-atari-transport test-atari-hsio test-atari-proc test-atari-read-profile test-atari-compact test-raw-transport-retry
 
 # Fast required change check: compile every configured target, then run the
 # host-side tests and public archive-link test. Keep this as a recipe rather

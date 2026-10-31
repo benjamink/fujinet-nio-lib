@@ -1,0 +1,21 @@
+name: Atari caller-owned packet buffers
+configs:
+  - ../../cc65-clib/tests/harness/harness.yaml
+config_file: atari_list_pages_soft65c02.cfg
+c_flags:
+  - -Osir
+  - -O
+src_files:
+  - atari_client_buffers_soft65c02.c
+  - ../src/platform/atari/fn_compact_state.c
+  - ../src/platform/atari/fn_compact_raw.s
+  - ../src/platform/atari/fn_compact_raw_c.s
+  - ../src/platform/atari/fn_compact_init.s
+  - ../src/platform/atari/fn_compact_parse.s
+  - ../src/platform/atari/fn_compact_checksum.s
+include_paths:
+  - ../include
+ld_flags:
+  - -t
+  - none
+test_script: atari_client_buffers_soft65c02.txt

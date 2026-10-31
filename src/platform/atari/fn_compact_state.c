@@ -28,8 +28,6 @@ typedef char compact_raw_size[(sizeof(fn_raw_response_t) == 3) ? 1 : -1];
 
 fn_session_t _fn_sessions[FN_MAX_SESSIONS];
 uint8_t _fn_initialized = 0;
-uint8_t _fn_req_buf[FN_MAX_PACKET_SIZE];
-uint8_t _fn_resp_buf[FN_MAX_PACKET_SIZE];
 fn_transport_ctx_t _fn_transport_ctx;
 fn_parse_ctx_t _fn_parse_ctx;
 

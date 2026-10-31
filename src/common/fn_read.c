@@ -17,6 +17,7 @@ uint8_t fn_read(fn_handle_t handle,
 #endif
     uint8_t result;
     int8_t slot;
+    fn_session_t *session;
 
     if (!_fn_initialized) {
         return FN_ERR_INVALID;
@@ -35,9 +36,10 @@ uint8_t fn_read(fn_handle_t handle,
     if (slot < 0) {
         return FN_ERR_NOT_FOUND;
     }
+    session = &_fn_sessions[slot];
 
-    if ((_fn_sessions[slot].proto_flags & FN_PROTO_FLAG_SEQUENTIAL_READ) &&
-        offset != _fn_sessions[slot].read_offset) {
+    if ((session->proto_flags & FN_PROTO_FLAG_SEQUENTIAL_READ) &&
+        offset != session->read_offset) {
         return FN_ERR_INVALID;
     }
 
@@ -91,8 +93,8 @@ uint8_t fn_read(fn_handle_t handle,
     *bytes_read = _fn_parse_ctx.data_len;
 #endif
 
-    if ((_fn_sessions[slot].proto_flags & FN_PROTO_FLAG_SEQUENTIAL_READ) && _fn_parse_ctx.data_len > 0) {
-        _fn_sessions[slot].read_offset += _fn_parse_ctx.data_len;
+    if ((session->proto_flags & FN_PROTO_FLAG_SEQUENTIAL_READ) && _fn_parse_ctx.data_len > 0) {
+        session->read_offset += _fn_parse_ctx.data_len;
     }
 
 #ifndef __CC65__

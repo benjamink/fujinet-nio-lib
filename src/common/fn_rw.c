@@ -29,6 +29,7 @@ uint8_t fn_write(fn_handle_t handle,
     uint16_t retries;
     uint8_t result;
     int8_t slot;
+    fn_session_t *session;
 
     memset(&last_write_diagnostics, 0, sizeof(last_write_diagnostics));
 
@@ -52,8 +53,9 @@ uint8_t fn_write(fn_handle_t handle,
     if (slot < 0) {
         return FN_ERR_NOT_FOUND;
     }
+    session = &_fn_sessions[slot];
 
-    if (offset != _fn_sessions[slot].write_offset) {
+    if (offset != session->write_offset) {
         return FN_ERR_INVALID;
     }
 
@@ -65,7 +67,7 @@ uint8_t fn_write(fn_handle_t handle,
 
         req_len = fn_build_write_packet(_fn_req_buf,
                                         handle,
-                                        offset + total,
+                                        session->write_offset,
                                         (data == NULL) ? NULL : data + total,
                                         remaining);
         if (req_len == 0) {
@@ -138,7 +140,7 @@ uint8_t fn_write(fn_handle_t handle,
             return FN_ERR_BUSY;
         }
 
-        _fn_sessions[slot].write_offset += accepted;
+        session->write_offset += accepted;
         total = (uint16_t)(total + accepted);
         retries = FN_WRITE_RETRY_LIMIT;
     } while (total < len);

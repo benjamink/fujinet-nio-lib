@@ -1,0 +1,8 @@
+memory load atari "${BINARY_PATH}"
+symbols load "${SYMBOLS_PATH}"
+registers flush
+memory write $_test_seen 0x(FF)
+memory write $_test_result 0x(FF)
+run $init_harness until CP = $end_init_harness
+assert $_test_seen = 0x5A $$application buffer test ran$$
+assert $_test_result = 0x00 $$raw exchange used the provided buffers$$
