@@ -60,8 +60,6 @@ uint8_t fn_open_prepare(const fn_handle_t *handle,
                         uint8_t flags,
                         uint8_t *wire_flags)
 {
-    uint8_t open_flags;
-
     if (!_fn_initialized) {
         return FN_ERR_INVALID;
     }
@@ -74,24 +72,18 @@ uint8_t fn_open_prepare(const fn_handle_t *handle,
         return FN_ERR_URL_TOO_LONG;
     }
 
-    open_flags = 0;
-    if (flags & FN_OPEN_FOLLOW_REDIR) {
-        open_flags |= FN_OPEN_FLAG_FOLLOW_REDIR;
-    }
-    if (flags & FN_OPEN_BODY_UNKNOWN) {
-        open_flags |= FN_OPEN_FLAG_BODY_UNKNOWN;
-    }
-    if (flags & FN_OPEN_ALLOW_EVICT) {
-        open_flags |= FN_OPEN_FLAG_ALLOW_EVICT;
-    }
-    if (flags & FN_OPEN_STREAM_NO_PROBE) {
-        open_flags |= FN_OPEN_FLAG_STREAM_NO_PROBE;
-    }
-    if (flags & FN_OPEN_KEEP) {
-        open_flags |= FN_OPEN_FLAG_KEEP;
-    }
+    /* These public bits deliberately mirror the protocol bits. Assert that
+       contract so a future flag change cannot silently alter the wire. */
+#if FN_OPEN_FOLLOW_REDIR != FN_OPEN_FLAG_FOLLOW_REDIR || \
+    FN_OPEN_BODY_UNKNOWN != FN_OPEN_FLAG_BODY_UNKNOWN || \
+    FN_OPEN_ALLOW_EVICT != FN_OPEN_FLAG_ALLOW_EVICT || \
+    FN_OPEN_STREAM_NO_PROBE != FN_OPEN_FLAG_STREAM_NO_PROBE || \
+    FN_OPEN_KEEP != FN_OPEN_FLAG_KEEP
+#error Public and wire Open flag values must be mapped explicitly
+#endif
+    *wire_flags = flags & (FN_OPEN_FOLLOW_REDIR | FN_OPEN_BODY_UNKNOWN |
+                           FN_OPEN_ALLOW_EVICT | FN_OPEN_STREAM_NO_PROBE | FN_OPEN_KEEP);
 
-    *wire_flags = open_flags;
     return FN_OK;
 }
 

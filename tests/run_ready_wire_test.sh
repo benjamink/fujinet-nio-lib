@@ -10,6 +10,7 @@ gcc -std=c99 -Wall -Wextra -Werror \
     "$ROOT/tests/ready_wire_test.c" \
     "$ROOT/src/common/fn_ready.c" \
     "$ROOT/src/common/fn_rw.c" \
+    "$ROOT/src/common/fn_read.c" \
     "$ROOT/src/common/fn_state.c" \
     "$ROOT/src/common/fn_packet_parse_read.c" \
     "$ROOT/src/common/fn_packet_parse_common.c" \

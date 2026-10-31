@@ -1,0 +1,18 @@
+name: Portable AppKey URI builder independent vectors
+configs:
+  - ../../cc65-clib/tests/harness/harness.yaml
+config_file: atari_list_pages_soft65c02.cfg
+c_flags:
+  - -Osir
+  - -O
+src_files:
+  - atari_appkey_uri_soft65c02.c
+  - atari_appkey_uri_profile.s
+  - ../src/legacy/fn_legacy_appkey_state.c
+  - ../src/legacy/fn_legacy_appkey_uri.c
+include_paths:
+  - ../include
+ld_flags:
+  - -t
+  - none
+test_script: atari_appkey_uri_soft65c02.txt

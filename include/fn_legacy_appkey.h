@@ -69,6 +69,12 @@ void fuji_set_appkey_details(uint16_t creator_id,
 /** Read a legacy appkey value. Returns true on success. */
 bool fuji_read_appkey(uint8_t key_id, uint16_t *count, uint8_t *data);
 
+/** Read using caller-owned scratch. The scratch must not overlap data and must
+ * hold at least 74 bytes for DEFAULT, or 266 for SIZE_256. `data` must hold
+ * the selected key size. The existing namespace and wire format are unchanged. */
+bool fuji_read_appkey_buffered(uint8_t key_id, uint16_t *count, uint8_t *data,
+                               uint8_t *scratch, uint16_t scratch_size);
+
 /** Write a legacy appkey value. Returns true on success. */
 bool fuji_write_appkey(uint8_t key_id, uint16_t count, uint8_t *data);
 

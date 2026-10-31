@@ -1,0 +1,124 @@
+marker $$Read parser case 0$$
+memory load atari "${BINARY_PATH}"
+symbols load "${SYMBOLS_PATH}"
+registers flush
+memory write $_test_case 0x(00)
+memory write $_test_seen 0x(FF)
+memory write $_test_result 0x(FF)
+run $init_harness until CP = $profile_start
+registers show cycle_count $$start$$
+run until CP = $profile_done
+registers show cycle_count $$end$$
+run until CP = $end_init_harness
+assert $_test_seen = 0x00 $$selected case ran$$
+assert $_test_result = 0x00 $$result and guards correct$$
+
+marker $$Read parser case 1$$
+memory load atari "${BINARY_PATH}"
+symbols load "${SYMBOLS_PATH}"
+registers flush
+memory write $_test_case 0x(01)
+memory write $_test_seen 0x(FF)
+memory write $_test_result 0x(FF)
+run $init_harness until CP = $end_init_harness
+assert $_test_seen = 0x01 $$selected case ran$$
+assert $_test_result = 0x00 $$result and guards correct$$
+
+marker $$Read parser case 2$$
+memory load atari "${BINARY_PATH}"
+symbols load "${SYMBOLS_PATH}"
+registers flush
+memory write $_test_case 0x(02)
+memory write $_test_seen 0x(FF)
+memory write $_test_result 0x(FF)
+run $init_harness until CP = $end_init_harness
+assert $_test_seen = 0x02 $$selected case ran$$
+assert $_test_result = 0x00 $$result and guards correct$$
+
+marker $$Read parser case 3$$
+memory load atari "${BINARY_PATH}"
+symbols load "${SYMBOLS_PATH}"
+registers flush
+memory write $_test_case 0x(03)
+memory write $_test_seen 0x(FF)
+memory write $_test_result 0x(FF)
+run $init_harness until CP = $end_init_harness
+assert $_test_seen = 0x03 $$selected case ran$$
+assert $_test_result = 0x00 $$result and guards correct$$
+
+marker $$Read parser case 4$$
+memory load atari "${BINARY_PATH}"
+symbols load "${SYMBOLS_PATH}"
+registers flush
+memory write $_test_case 0x(04)
+memory write $_test_seen 0x(FF)
+memory write $_test_result 0x(FF)
+run $init_harness until CP = $end_init_harness
+assert $_test_seen = 0x04 $$selected case ran$$
+assert $_test_result = 0x00 $$result and guards correct$$
+
+marker $$Read parser case 5$$
+memory load atari "${BINARY_PATH}"
+symbols load "${SYMBOLS_PATH}"
+registers flush
+memory write $_test_case 0x(05)
+memory write $_test_seen 0x(FF)
+memory write $_test_result 0x(FF)
+run $init_harness until CP = $end_init_harness
+assert $_test_seen = 0x05 $$selected case ran$$
+assert $_test_result = 0x00 $$result and guards correct$$
+
+marker $$Read parser case 6$$
+memory load atari "${BINARY_PATH}"
+symbols load "${SYMBOLS_PATH}"
+registers flush
+memory write $_test_case 0x(06)
+memory write $_test_seen 0x(FF)
+memory write $_test_result 0x(FF)
+run $init_harness until CP = $end_init_harness
+assert $_test_seen = 0x06 $$selected case ran$$
+assert $_test_result = 0x00 $$result and guards correct$$
+
+marker $$Read parser case 7$$
+memory load atari "${BINARY_PATH}"
+symbols load "${SYMBOLS_PATH}"
+registers flush
+memory write $_test_case 0x(07)
+memory write $_test_seen 0x(FF)
+memory write $_test_result 0x(FF)
+run $init_harness until CP = $end_init_harness
+assert $_test_seen = 0x07 $$selected case ran$$
+assert $_test_result = 0x00 $$result and guards correct$$
+
+marker $$Read parser case 8$$
+memory load atari "${BINARY_PATH}"
+symbols load "${SYMBOLS_PATH}"
+registers flush
+memory write $_test_case 0x(08)
+memory write $_test_seen 0x(FF)
+memory write $_test_result 0x(FF)
+run $init_harness until CP = $end_init_harness
+assert $_test_seen = 0x08 $$selected case ran$$
+assert $_test_result = 0x00 $$result and guards correct$$
+
+marker $$Read parser case 9$$
+memory load atari "${BINARY_PATH}"
+symbols load "${SYMBOLS_PATH}"
+registers flush
+memory write $_test_case 0x(09)
+memory write $_test_seen 0x(FF)
+memory write $_test_result 0x(FF)
+run $init_harness until CP = $end_init_harness
+assert $_test_seen = 0x09 $$selected case ran$$
+assert $_test_result = 0x00 $$result and guards correct$$
+
+marker $$Read parser case 10$$
+memory load atari "${BINARY_PATH}"
+symbols load "${SYMBOLS_PATH}"
+registers flush
+memory write $_test_case 0x(0A)
+memory write $_test_seen 0x(FF)
+memory write $_test_result 0x(FF)
+run $init_harness until CP = $end_init_harness
+assert $_test_seen = 0x0A $$selected case ran$$
+assert $_test_result = 0x00 $$result and guards correct$$

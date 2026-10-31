@@ -11,6 +11,7 @@ static uint8_t last_device;
 static uint8_t last_command;
 static uint8_t last_payload[512];
 static uint16_t last_payload_len;
+static uint8_t malformed_read;
 
 static void put_u16le(uint8_t *p, uint16_t value)
 {
@@ -95,6 +96,9 @@ uint8_t fn_raw_call(uint8_t device,
         put_u16le(&out[8], sizeof(value));
         memcpy(&out[10], value, sizeof(value));
         response->payload_length = 13;
+        if (malformed_read == 1) response->payload_length = 9;
+        if (malformed_read == 2) out[4] = 1;
+        if (malformed_read == 3) put_u16le(&out[8], 64);
         return FN_OK;
     }
 
@@ -165,6 +169,39 @@ static int test_read_default_key(void)
     return 0;
 }
 
+static int test_buffered_read(void)
+{
+    uint8_t data[256], scratch[266];
+    uint16_t count = 99;
+    fuji_set_appkey_details(0x1234, 0xab, DEFAULT);
+    call_count = 0;
+    if (fuji_read_appkey_buffered(0xcd, &count, data, scratch, 73) || count != 0 || call_count != 0)
+        return puts("short scratch accepted"), 1;
+    if (!fuji_read_appkey_buffered(0xcd, &count, data, scratch, 74) ||
+        count != 3 || memcmp(data, "XYZ", 3) || !expect_uri_payload("persist:///FujiNet/1234abcd.key"))
+        return puts("buffered DEFAULT read failed"), 1;
+    if (last_payload_len != 40 || memcmp(last_payload + 34, "\0\0\0\0\x40\0", 6))
+        return puts("buffered DEFAULT read range mismatch"), 1;
+    fuji_set_appkey_details(0x1234, 0xab, SIZE_256);
+    count = 99; call_count = 0;
+    if (fuji_read_appkey_buffered(0xcd, &count, data, scratch, 265) || count != 0 || call_count != 0)
+        return puts("short SIZE_256 scratch accepted"), 1;
+    if (!fuji_read_appkey_buffered(0xcd, &count, data, scratch, sizeof(scratch)) || count != 3)
+        return puts("buffered SIZE_256 read failed"), 1;
+    if (last_payload_len != 40 || memcmp(last_payload + 34, "\0\0\0\0\0\x01", 6))
+        return puts("buffered SIZE_256 read range mismatch"), 1;
+    fuji_set_appkey_details(0x1234, 0xab, DEFAULT);
+    for (malformed_read = 1; malformed_read <= 3; ++malformed_read) {
+        memset(data, 0xa5, sizeof(data));
+        count = 99;
+        if (fuji_read_appkey_buffered(0xcd, &count, data, scratch, 74) ||
+            count != 0 || data[0] != 0xa5)
+            return puts("malformed buffered read accepted"), 1;
+    }
+    malformed_read = 0;
+    return 0;
+}
+
 static int test_size_limits(void)
 {
     uint8_t value[65];
@@ -193,6 +230,7 @@ int main(void)
 {
     if (test_write_default_key()) return 1;
     if (test_read_default_key()) return 1;
+    if (test_buffered_read()) return 1;
     if (test_size_limits()) return 1;
     puts("legacy appkey wire tests passed");
     return 0;

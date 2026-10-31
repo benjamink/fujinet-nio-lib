@@ -1,0 +1,17 @@
+name: Atari network Read response independent vectors
+configs:
+  - ../../cc65-clib/tests/harness/harness.yaml
+config_file: atari_list_pages_soft65c02.cfg
+c_flags:
+  - -Osir
+  - -O
+src_files:
+  - atari_parse_read_soft65c02.c
+  - atari_parse_read_profile.s
+  - ../src/platform/atari/fn_parse_read.s
+include_paths:
+  - ../include
+ld_flags:
+  - -t
+  - none
+test_script: atari_parse_read_soft65c02.txt

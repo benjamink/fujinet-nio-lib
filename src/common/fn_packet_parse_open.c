@@ -16,9 +16,10 @@ uint8_t fn_parse_open_response(void)
         return FN_ERR_INVALID;
     }
 
-    _fn_parse_ctx.flags = response[_fn_parse_ctx.data_offset + 1];
-    _fn_parse_ctx.handle = FN_READ_LE16(response, _fn_parse_ctx.data_offset + 4);
-    _fn_parse_ctx.proto_flags = response[_fn_parse_ctx.data_offset + 6];
+    response += _fn_parse_ctx.data_offset;
+    _fn_parse_ctx.flags = response[1];
+    _fn_parse_ctx.handle = FN_GET_LE16(response + 4);
+    _fn_parse_ctx.proto_flags = response[6];
 
     return FN_OK;
 }

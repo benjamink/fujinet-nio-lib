@@ -106,6 +106,8 @@ void fuji_set_appkey_details(uint16_t creator_id,
                              uint8_t app_id,
                              enum AppKeySize keysize);
 bool fuji_read_appkey(uint8_t key_id, uint16_t *count, uint8_t *data);
+bool fuji_read_appkey_buffered(uint8_t key_id, uint16_t *count, uint8_t *data,
+                               uint8_t *scratch, uint16_t scratch_size);
 bool fuji_write_appkey(uint8_t key_id, uint16_t count, uint8_t *data);
 ```
 
@@ -128,6 +130,14 @@ persistent filesystem, such as `host` on POSIX/embedded Altirra and `sd0` or
 `flash` on ESP32. This keeps client code platform agnostic while preserving the
 legacy on-disk format. `fuji_write_appkey()` creates `persist:///FujiNet` before
 writing, so a new persistent store starts empty but usable.
+
+`fuji_read_appkey_buffered()` uses the same namespace and result as
+`fuji_read_appkey()`, but takes caller-owned scratch that must not overlap the
+output. Provide at least 74 bytes for `DEFAULT` or 266 for `SIZE_256`; the output
+must hold the selected key size. The scratch can share storage with another
+application buffer whose lifetime does not overlap the call. Calling only the
+buffered read does not link the legacy compatibility buffer. The original API
+remains available for applications that prefer library-owned storage.
 
 These functions live in separate `src/legacy` archive members. Normal
 applications do not link them unless they reference the legacy symbols. The BBC

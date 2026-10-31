@@ -70,6 +70,8 @@ COMMON_SRCS_DEFAULT := $(SRCDIR)/common/fn_slip.c \
                        $(SRCDIR)/common/fn_tcp_open.c \
                        $(SRCDIR)/common/fn_open_translated.c \
                        $(SRCDIR)/common/fn_rw.c \
+                       $(SRCDIR)/common/fn_read.c \
+                       $(SRCDIR)/common/fn_info.c \
                        $(SRCDIR)/common/fn_info_close.c \
                        $(SRCDIR)/common/fn_ready.c \
                        $(SRCDIR)/common/fn_util.c \
@@ -123,9 +125,13 @@ COMMON_SRCS_DEFAULT += $(SRCDIR)/common/fn_wifi.c $(SRCDIR)/common/fn_wifi_set.c
                        $(SRCDIR)/common/fn_fuji_info.c
 
 LEGACY_SRCS_DEFAULT := $(SRCDIR)/legacy/fn_legacy_appkey_state.c \
+                       $(SRCDIR)/legacy/fn_legacy_appkey_buffer.c \
                        $(SRCDIR)/legacy/fn_legacy_appkey_util.c \
+                       $(SRCDIR)/legacy/fn_legacy_appkey_uri.c \
+                       $(SRCDIR)/legacy/fn_legacy_appkey_mkdir.c \
                        $(SRCDIR)/legacy/fn_legacy_appkey_set.c \
                        $(SRCDIR)/legacy/fn_legacy_appkey_read.c \
+                       $(SRCDIR)/legacy/fn_legacy_appkey_read_buffered.c \
                        $(SRCDIR)/legacy/fn_legacy_appkey_write.c
 
 COMMON_SRCS_BBC := $(SRCDIR)/common/fn_util.c \
@@ -190,7 +196,8 @@ PLATFORM_ASMS := $(wildcard $(PLATFORM_DIR)/*.s)
 PLATFORM_ASM_INCLUDES := $(wildcard $(PLATFORM_DIR)/*.inc)
 
 ifeq ($(PLATFORM),atari)
-COMMON_SRCS := $(filter-out $(SRCDIR)/common/fn_file_list_pages.c,$(COMMON_SRCS))
+LEGACY_SRCS := $(filter-out $(SRCDIR)/legacy/fn_legacy_appkey_uri.c,$(LEGACY_SRCS))
+COMMON_SRCS := $(filter-out $(SRCDIR)/common/fn_file_list_pages.c $(SRCDIR)/common/fn_packet_parse_read.c,$(COMMON_SRCS))
 ifeq ($(ATARI_BACKEND),compact)
 TARGET_ASFLAGS += --asm-define FN_ATARI_COMPACT=1
 COMMON_SRCS := $(filter-out $(addprefix $(SRCDIR)/common/,fn_checksum_fold.c fn_packet_checksum.c fn_packet_checksum_packet.c fn_packet_header.c fn_packet_parse_common.c fn_state.c fn_init.c fn_raw.c fn_packet_build_open.c fn_packet_build_rw.c fn_packet_build_misc.c),$(COMMON_SRCS))

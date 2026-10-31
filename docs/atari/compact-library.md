@@ -175,3 +175,21 @@ soft65c02_unit -v -b build/tests/list-pages-atari-profile -i tests/atari_list_pa
 
 For each of the first two cases, subtract the displayed start cycle count from
 the end count. Changes in code layout can slightly affect cycle totals.
+
+## AppKey URI size and timing
+
+The Atari AppKey URI builder uses a small assembly implementation with the same
+private calling convention and output as the portable C version. Run
+`bash tests/run_atari_appkey_uri_test.sh` for both implementations against the
+same literal expected paths, capacity boundaries and guard bytes. With the
+workspace cc65 toolchain, the standalone objects use 293 bytes for C and 147
+for assembly (code plus read-only data). The first vector takes 2,168 cycles in
+C and 706 in assembly, measured between the soft65c02 profile markers.
+
+The Atari network Read response parser also uses a private assembly path,
+checked against the portable C implementation with
+`bash tests/run_atari_parse_read_test.sh`. The vectors include short and
+malformed replies, errors, and 0, 255, 256 and 260-byte reads with guards.
+For the 260-byte case the portable parser takes 5,647 cycles and the assembly
+parser 4,740, measured between the same markers. Its object is 232 bytes
+smaller in the game build; the assembly reserves four bytes of scratch.

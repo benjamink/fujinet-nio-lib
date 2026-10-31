@@ -1,6 +1,7 @@
 #include <stdint.h>
 
 #include "fn_raw.h"
+#include "fn_legacy_appkey.h"
 #include "fn_session.h"
 #include "fujinet-nio.h"
 
@@ -82,10 +83,12 @@ int main(void)
         channel_open, channel_close, channel_write, channel_read,
         channel_flush, NULL
     };
+    bool (*volatile buffered_appkey)(uint8_t, uint16_t *, uint8_t *, uint8_t *, uint16_t) = fuji_read_appkey_buffered;
     fn_stream_session_t session;
     fn_disk_info_t info;
     uint8_t wire[64];
 
+    if (!buffered_appkey) return 1;
     if (fn_stream_session_init(&session, &channel_ops, 0, wire,
                                sizeof(wire)) != FN_OK) return 1;
     if (fn_disk_mount(1, "test:disk.adf", 1, FN_DISK_TYPE_AUTO, 0,

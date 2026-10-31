@@ -1,0 +1,47 @@
+marker $$AppKey URI case 0$$
+memory load atari "${BINARY_PATH}"
+symbols load "${SYMBOLS_PATH}"
+registers flush
+memory write $_test_case 0x(00)
+memory write $_test_seen 0x(FF)
+memory write $_test_result 0x(FF)
+run $init_harness until CP = $profile_start
+registers show cycle_count $$start$$
+run until CP = $profile_done
+registers show cycle_count $$end$$
+run until CP = $end_init_harness
+assert $_test_seen = 0x00 $$selected case ran$$
+assert $_test_result = 0x00 $$URI and guards correct$$
+
+marker $$AppKey URI case 1$$
+memory load atari "${BINARY_PATH}"
+symbols load "${SYMBOLS_PATH}"
+registers flush
+memory write $_test_case 0x(01)
+memory write $_test_seen 0x(FF)
+memory write $_test_result 0x(FF)
+run $init_harness until CP = $end_init_harness
+assert $_test_seen = 0x01 $$selected case ran$$
+assert $_test_result = 0x00 $$URI and guards correct$$
+
+marker $$AppKey URI case 2$$
+memory load atari "${BINARY_PATH}"
+symbols load "${SYMBOLS_PATH}"
+registers flush
+memory write $_test_case 0x(02)
+memory write $_test_seen 0x(FF)
+memory write $_test_result 0x(FF)
+run $init_harness until CP = $end_init_harness
+assert $_test_seen = 0x02 $$selected case ran$$
+assert $_test_result = 0x00 $$URI and guards correct$$
+
+marker $$AppKey URI case 3$$
+memory load atari "${BINARY_PATH}"
+symbols load "${SYMBOLS_PATH}"
+registers flush
+memory write $_test_case 0x(03)
+memory write $_test_seen 0x(FF)
+memory write $_test_result 0x(FF)
+run $init_harness until CP = $end_init_harness
+assert $_test_seen = 0x03 $$selected case ran$$
+assert $_test_result = 0x00 $$URI and guards correct$$
