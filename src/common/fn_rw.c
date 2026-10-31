@@ -64,6 +64,10 @@ uint8_t fn_write(fn_handle_t handle,
 
     do {
         remaining = (uint16_t)(len - total);
+        /* A Write packet has a 15-byte header and metadata. Split larger
+         * writes before the builder copies into the fixed request buffer. */
+        if (remaining > FN_MAX_PACKET_SIZE - 15u)
+            remaining = FN_MAX_PACKET_SIZE - 15u;
 
         req_len = fn_build_write_packet(_fn_req_buf,
                                         handle,

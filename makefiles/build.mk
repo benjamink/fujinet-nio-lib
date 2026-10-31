@@ -66,6 +66,7 @@ COMMON_SRCS_DEFAULT := $(SRCDIR)/common/fn_slip.c \
                        $(SRCDIR)/common/fn_init.c \
                        $(SRCDIR)/common/fn_shutdown.c \
                        $(SRCDIR)/common/fn_open.c \
+                       $(SRCDIR)/common/fn_open_exchange.c \
                        $(SRCDIR)/common/fn_open_headers.c \
                        $(SRCDIR)/common/fn_tcp_open.c \
                        $(SRCDIR)/common/fn_open_translated.c \
@@ -200,7 +201,7 @@ LEGACY_SRCS := $(filter-out $(SRCDIR)/legacy/fn_legacy_appkey_uri.c,$(LEGACY_SRC
 COMMON_SRCS := $(filter-out $(SRCDIR)/common/fn_file_list_pages.c $(SRCDIR)/common/fn_packet_parse_read.c,$(COMMON_SRCS))
 ifeq ($(ATARI_BACKEND),compact)
 TARGET_ASFLAGS += --asm-define FN_ATARI_COMPACT=1
-COMMON_SRCS := $(filter-out $(addprefix $(SRCDIR)/common/,fn_checksum_fold.c fn_packet_checksum.c fn_packet_checksum_packet.c fn_packet_header.c fn_packet_parse_common.c fn_state.c fn_init.c fn_raw.c fn_packet_build_open.c fn_packet_build_rw.c fn_packet_build_misc.c),$(COMMON_SRCS))
+COMMON_SRCS := $(filter-out $(addprefix $(SRCDIR)/common/,fn_checksum_fold.c fn_packet_checksum.c fn_packet_checksum_packet.c fn_packet_header.c fn_packet_parse_common.c fn_state.c fn_init.c fn_raw.c fn_packet_build_open.c fn_packet_build_rw.c fn_packet_build_misc.c fn_read.c fn_open_exchange.c fn_rw.c),$(COMMON_SRCS))
 else
 PLATFORM_ASMS := $(filter-out $(PLATFORM_DIR)/fn_compact_%.s,$(PLATFORM_ASMS))
 PLATFORM_SRCS := $(filter-out $(PLATFORM_DIR)/fn_compact_%.c,$(PLATFORM_SRCS))

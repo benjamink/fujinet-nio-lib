@@ -9,6 +9,7 @@ gcc -std=c99 -Wall -Wextra -Werror \
     -I"$ROOT/include" \
     "$ROOT/tests/open_wire_test.c" \
     "$ROOT/src/common/fn_open.c" \
+    "$ROOT/src/common/fn_open_exchange.c" \
     "$ROOT/src/common/fn_open_headers.c" \
     "$ROOT/src/common/fn_tcp_open.c" \
     "$ROOT/src/common/fn_open_translated.c" \

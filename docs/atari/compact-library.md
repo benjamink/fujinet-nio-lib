@@ -194,6 +194,22 @@ For the 260-byte case the portable parser takes 5,647 cycles and the assembly
 parser 4,740, measured between the same markers. Its object is 232 bytes
 smaller in the game build; the assembly reserves four bytes of scratch.
 
+The compact Atari Open exchange, Read and Write paths also use private assembly
+implementations. `tests/run_atari_network_open_test.sh`,
+`tests/run_atari_network_read_test.sh` and
+`tests/run_atari_network_write_test.sh` run the same independent API vectors
+against the portable C and Atari implementations. The fixtures replace packet
+building, transport and parsing with checked test doubles, so the cycle counts
+below measure these paths with those doubles, not a physical SIO transaction.
+The first successful vector measured 1,428 versus 644 cycles for Open exchange,
+2,906 versus 1,893 for Read, and 4,155 versus 2,978 for Write (C versus Atari
+assembly). The assembly uses 45 more bytes of persistent scratch in total than
+the C objects; the existing compact backend is synchronous and non-reentrant.
+
+Write data is split at the packet boundary: a request contains at most 497 data
+bytes in a 512-byte Atari packet. This also prevents oversized writes from
+overrunning the request buffer on the portable implementation.
+
 ## Application-owned packet workspaces
 
 The compact Atari archive normally supplies a 512-byte request buffer and a

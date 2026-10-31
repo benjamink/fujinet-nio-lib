@@ -1,0 +1,17 @@
+name: Portable network open exchange independent API vectors
+configs:
+  - ../../cc65-clib/tests/harness/harness.yaml
+config_file: atari_list_pages_soft65c02.cfg
+c_flags:
+  - -Osir
+  - -O
+src_files:
+  - atari_network_open_soft65c02.c
+  - atari_network_open_profile.s
+  - ../src/common/fn_open_exchange.c
+include_paths:
+  - ../include
+ld_flags:
+  - -t
+  - none
+test_script: atari_network_open_soft65c02.txt

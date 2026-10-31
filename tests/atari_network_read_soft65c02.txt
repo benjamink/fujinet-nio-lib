@@ -1,0 +1,201 @@
+marker $$network read case 0$$
+memory load atari "${BINARY_PATH}"
+symbols load "${SYMBOLS_PATH}"
+registers flush
+memory write $_test_case 0x(00)
+memory write $_test_seen 0x(FF)
+memory write $_test_result 0x(FF)
+run $init_harness until CP = $profile_start
+registers show cycle_count $$start$$
+run until CP = $profile_done
+registers show cycle_count $$end$$
+run until CP = $end_init_harness
+assert $_test_seen = 0x00 $$selected case ran$$
+assert $_test_result = 0x00 $$result, arguments, state and output correct$$
+
+marker $$network read case 1$$
+memory load atari "${BINARY_PATH}"
+symbols load "${SYMBOLS_PATH}"
+registers flush
+memory write $_test_case 0x(01)
+memory write $_test_seen 0x(FF)
+memory write $_test_result 0x(FF)
+run $init_harness until CP = $end_init_harness
+assert $_test_seen = 0x01 $$selected case ran$$
+assert $_test_result = 0x00 $$result, arguments, state and output correct$$
+
+marker $$network read case 2$$
+memory load atari "${BINARY_PATH}"
+symbols load "${SYMBOLS_PATH}"
+registers flush
+memory write $_test_case 0x(02)
+memory write $_test_seen 0x(FF)
+memory write $_test_result 0x(FF)
+run $init_harness until CP = $end_init_harness
+assert $_test_seen = 0x02 $$selected case ran$$
+assert $_test_result = 0x00 $$result, arguments, state and output correct$$
+
+marker $$network read case 3$$
+memory load atari "${BINARY_PATH}"
+symbols load "${SYMBOLS_PATH}"
+registers flush
+memory write $_test_case 0x(03)
+memory write $_test_seen 0x(FF)
+memory write $_test_result 0x(FF)
+run $init_harness until CP = $end_init_harness
+assert $_test_seen = 0x03 $$selected case ran$$
+assert $_test_result = 0x00 $$result, arguments, state and output correct$$
+
+marker $$network read case 4$$
+memory load atari "${BINARY_PATH}"
+symbols load "${SYMBOLS_PATH}"
+registers flush
+memory write $_test_case 0x(04)
+memory write $_test_seen 0x(FF)
+memory write $_test_result 0x(FF)
+run $init_harness until CP = $end_init_harness
+assert $_test_seen = 0x04 $$selected case ran$$
+assert $_test_result = 0x00 $$result, arguments, state and output correct$$
+
+marker $$network read case 5$$
+memory load atari "${BINARY_PATH}"
+symbols load "${SYMBOLS_PATH}"
+registers flush
+memory write $_test_case 0x(05)
+memory write $_test_seen 0x(FF)
+memory write $_test_result 0x(FF)
+run $init_harness until CP = $end_init_harness
+assert $_test_seen = 0x05 $$selected case ran$$
+assert $_test_result = 0x00 $$result, arguments, state and output correct$$
+
+marker $$network read case 6$$
+memory load atari "${BINARY_PATH}"
+symbols load "${SYMBOLS_PATH}"
+registers flush
+memory write $_test_case 0x(06)
+memory write $_test_seen 0x(FF)
+memory write $_test_result 0x(FF)
+run $init_harness until CP = $end_init_harness
+assert $_test_seen = 0x06 $$selected case ran$$
+assert $_test_result = 0x00 $$result, arguments, state and output correct$$
+
+marker $$network read case 7$$
+memory load atari "${BINARY_PATH}"
+symbols load "${SYMBOLS_PATH}"
+registers flush
+memory write $_test_case 0x(07)
+memory write $_test_seen 0x(FF)
+memory write $_test_result 0x(FF)
+run $init_harness until CP = $end_init_harness
+assert $_test_seen = 0x07 $$selected case ran$$
+assert $_test_result = 0x00 $$result, arguments, state and output correct$$
+
+marker $$network read case 8$$
+memory load atari "${BINARY_PATH}"
+symbols load "${SYMBOLS_PATH}"
+registers flush
+memory write $_test_case 0x(08)
+memory write $_test_seen 0x(FF)
+memory write $_test_result 0x(FF)
+run $init_harness until CP = $end_init_harness
+assert $_test_seen = 0x08 $$selected case ran$$
+assert $_test_result = 0x00 $$result, arguments, state and output correct$$
+
+marker $$network read case 9$$
+memory load atari "${BINARY_PATH}"
+symbols load "${SYMBOLS_PATH}"
+registers flush
+memory write $_test_case 0x(09)
+memory write $_test_seen 0x(FF)
+memory write $_test_result 0x(FF)
+run $init_harness until CP = $end_init_harness
+assert $_test_seen = 0x09 $$selected case ran$$
+assert $_test_result = 0x00 $$result, arguments, state and output correct$$
+
+marker $$network read case 10$$
+memory load atari "${BINARY_PATH}"
+symbols load "${SYMBOLS_PATH}"
+registers flush
+memory write $_test_case 0x(0A)
+memory write $_test_seen 0x(FF)
+memory write $_test_result 0x(FF)
+run $init_harness until CP = $end_init_harness
+assert $_test_seen = 0x0A $$selected case ran$$
+assert $_test_result = 0x00 $$result, arguments, state and output correct$$
+
+marker $$network read case 11$$
+memory load atari "${BINARY_PATH}"
+symbols load "${SYMBOLS_PATH}"
+registers flush
+memory write $_test_case 0x(0B)
+memory write $_test_seen 0x(FF)
+memory write $_test_result 0x(FF)
+run $init_harness until CP = $end_init_harness
+assert $_test_seen = 0x0B $$selected case ran$$
+assert $_test_result = 0x00 $$result, arguments, state and output correct$$
+
+marker $$network read case 12$$
+memory load atari "${BINARY_PATH}"
+symbols load "${SYMBOLS_PATH}"
+registers flush
+memory write $_test_case 0x(0C)
+memory write $_test_seen 0x(FF)
+memory write $_test_result 0x(FF)
+run $init_harness until CP = $end_init_harness
+assert $_test_seen = 0x0C $$selected case ran$$
+assert $_test_result = 0x00 $$result, arguments, state and output correct$$
+
+marker $$network read case 13$$
+memory load atari "${BINARY_PATH}"
+symbols load "${SYMBOLS_PATH}"
+registers flush
+memory write $_test_case 0x(0D)
+memory write $_test_seen 0x(FF)
+memory write $_test_result 0x(FF)
+run $init_harness until CP = $end_init_harness
+assert $_test_seen = 0x0D $$selected case ran$$
+assert $_test_result = 0x00 $$result, arguments, state and output correct$$
+
+marker $$network read case 14$$
+memory load atari "${BINARY_PATH}"
+symbols load "${SYMBOLS_PATH}"
+registers flush
+memory write $_test_case 0x(0E)
+memory write $_test_seen 0x(FF)
+memory write $_test_result 0x(FF)
+run $init_harness until CP = $end_init_harness
+assert $_test_seen = 0x0E $$selected case ran$$
+assert $_test_result = 0x00 $$result, arguments, state and output correct$$
+
+marker $$network read case 15$$
+memory load atari "${BINARY_PATH}"
+symbols load "${SYMBOLS_PATH}"
+registers flush
+memory write $_test_case 0x(0F)
+memory write $_test_seen 0x(FF)
+memory write $_test_result 0x(FF)
+run $init_harness until CP = $end_init_harness
+assert $_test_seen = 0x0F $$selected case ran$$
+assert $_test_result = 0x00 $$result, arguments, state and output correct$$
+
+marker $$network read case 16$$
+memory load atari "${BINARY_PATH}"
+symbols load "${SYMBOLS_PATH}"
+registers flush
+memory write $_test_case 0x(10)
+memory write $_test_seen 0x(FF)
+memory write $_test_result 0x(FF)
+run $init_harness until CP = $end_init_harness
+assert $_test_seen = 0x10 $$selected case ran$$
+assert $_test_result = 0x00 $$result, arguments, state and output correct$$
+
+marker $$network read aliased outputs$$
+memory load atari "${BINARY_PATH}"
+symbols load "${SYMBOLS_PATH}"
+registers flush
+memory write $_test_case 0x(11)
+memory write $_test_seen 0x(FF)
+memory write $_test_result 0x(FF)
+run $init_harness until CP = $end_init_harness
+assert $_test_seen = 0x11 $$selected case ran$$
+assert $_test_result = 0x00 $$flags and byte count alias preserve C order$$

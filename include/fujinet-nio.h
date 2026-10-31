@@ -847,7 +847,8 @@ uint8_t fn_tcp_open(fn_handle_t *handle,
  *
  * The library retries transient FN_ERR_NOT_READY/FN_ERR_BUSY responses and
  * continues partial writes until the requested byte count has been accepted or
- * a non-transient error occurs.
+ * a non-transient error occurs. Writes larger than one packet are split into
+ * bounded requests; each request includes 15 bytes of protocol overhead.
  * 
  * @param handle     Session handle
  * @param offset     Byte offset (must be sequential)
