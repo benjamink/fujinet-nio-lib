@@ -126,6 +126,17 @@ uint8_t fn_atari_capability_flags(void);
 /* ISR-safe readiness latch for an application-owned/chained VPRCED handler. */
 void fn_atari_proc_notify(void);
 
+/* Clear selected U1MB non-disk device speed cache slots, bits 0-3.
+ * The U1MB's undocumented PBI tables are detected before they are touched;
+ * device IDs and disk slots are not changed. Call outside an SIO operation.
+ * Returns FN_ERR_UNSUPPORTED if the PBI firmware is not found and FN_ERR_IO
+ * if a selected byte does not read back as zero. */
+uint8_t fn_atari_u1mb_clear_devices(uint8_t mask);
+/* Clear every non-disk cache slot whose device ID equals device. */
+uint8_t fn_atari_u1mb_clear_device(uint8_t device);
+/* Clear disk speed entries 1-15: bit 0 is D1, bit 14 is D15. */
+uint8_t fn_atari_u1mb_clear_disks(uint16_t mask);
+
 /* High-speed SIO for the native endpoint (docs/atari/hsio.md). The Atari OS only speaks 19200
  * baud, and a SIO speed driver such as the U1MB's speeds up disks but not this endpoint, so a
  * program that wants it asks the FujiNet for its speed index (the Happy/Speedy 3F query) and from
@@ -241,6 +252,12 @@ uint8_t fn_wifi_get_adapter_info(fn_wifi_adapter_info_t *info);
 /* FujiDevice: describes the FujiNet itself. No network is involved, so the
  * call answers quickly on any board. */
 #define FN_FUJI_MAX_FIRMWARE_VERSION 32
+#define FN_FUJI_HSIO_OFF 0xff
+/* Advertised SIO divisor, 0-9 or FN_FUJI_HSIO_OFF. Changes are transient.
+ * A speed driver that caches per-device values needs its cache cleared before
+ * it will re-query; the call itself does not change an Atari driver's cache. */
+uint8_t fn_fuji_get_hsio(uint8_t *index);
+uint8_t fn_fuji_set_hsio(uint8_t index);
 #define FN_FUJI_MAX_BUILD_PROFILE    64
 typedef struct {
     char firmware[FN_FUJI_MAX_FIRMWARE_VERSION + 1];   /* e.g. "0.1.1" */

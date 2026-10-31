@@ -84,11 +84,13 @@ int main(void)
         channel_flush, NULL
     };
     bool (*volatile buffered_appkey)(uint8_t, uint16_t *, uint8_t *, uint8_t *, uint16_t) = fuji_read_appkey_buffered;
+    uint8_t (*volatile get_hsio)(uint8_t *) = fn_fuji_get_hsio;
+    uint8_t (*volatile set_hsio)(uint8_t) = fn_fuji_set_hsio;
     fn_stream_session_t session;
     fn_disk_info_t info;
     uint8_t wire[64];
 
-    if (!buffered_appkey) return 1;
+    if (!buffered_appkey || !get_hsio || !set_hsio) return 1;
     if (fn_stream_session_init(&session, &channel_ops, 0, wire,
                                sizeof(wire)) != FN_OK) return 1;
     if (fn_disk_mount(1, "test:disk.adf", 1, FN_DISK_TYPE_AUTO, 0,

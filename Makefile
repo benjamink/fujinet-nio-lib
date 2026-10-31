@@ -219,7 +219,15 @@ test-all-build:
 	@echo "Building all configured library targets..."
 	$(MAKE) all
 
-test: test-library-link test-legacy test-mount-resolve test-appstore-read test-list-pages test-atari-list-pages test-atari-appkey-uri test-atari-parse-read test-atari-client-buffers test-atari-network-read test-atari-network-write test-atari-network-open test-slot-catalog test-fuji test-wifi test-disk test-disk-context test-session test-open-ext test-open-wire test-ready-wire test-large-read test-write-partial test-amiga-transport test-atari-transport test-atari-hsio test-atari-proc test-atari-read-profile test-atari-compact test-raw-transport-retry
+test-u1mb-clear:
+	bash tests/run_u1mb_clear_test.sh
+
+test-fuji-hsio:
+	bash tests/run_fuji_hsio_test.sh
+
+test: test-fuji-hsio
+
+test: test-u1mb-clear test-library-link test-legacy test-mount-resolve test-appstore-read test-list-pages test-atari-list-pages test-atari-appkey-uri test-atari-parse-read test-atari-client-buffers test-atari-network-read test-atari-network-write test-atari-network-open test-slot-catalog test-fuji test-wifi test-disk test-disk-context test-session test-open-ext test-open-wire test-ready-wire test-large-read test-write-partial test-amiga-transport test-atari-transport test-atari-hsio test-atari-proc test-atari-read-profile test-atari-compact test-raw-transport-retry
 
 # Fast required change check: compile every configured target, then run the
 # host-side tests and public archive-link test. Keep this as a recipe rather

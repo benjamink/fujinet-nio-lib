@@ -123,7 +123,7 @@ COMMON_SRCS_DEFAULT := $(SRCDIR)/common/fn_slip.c \
                        $(SRCDIR)/common/fn_disk_context.c \
                        $(SRCDIR)/common/fn_raw.c
 COMMON_SRCS_DEFAULT += $(SRCDIR)/common/fn_wifi.c $(SRCDIR)/common/fn_wifi_set.c $(SRCDIR)/common/fn_wifi_adapter.c \
-                       $(SRCDIR)/common/fn_fuji_info.c
+                       $(SRCDIR)/common/fn_fuji_info.c $(SRCDIR)/common/fn_fuji_hsio_call.c $(SRCDIR)/common/fn_fuji_hsio_get.c $(SRCDIR)/common/fn_fuji_hsio_set.c
 
 LEGACY_SRCS_DEFAULT := $(SRCDIR)/legacy/fn_legacy_appkey_state.c \
                        $(SRCDIR)/legacy/fn_legacy_appkey_buffer.c \
@@ -164,6 +164,7 @@ COMMON_SRCS_BBC := $(SRCDIR)/common/fn_util.c \
                     $(SRCDIR)/common/fn_format_mount_display.c
 COMMON_SRCS_BBC += $(SRCDIR)/platform/bbc/fn_wifi.c $(SRCDIR)/platform/bbc/fn_wifi_adapter.c \
                    $(SRCDIR)/platform/bbc/fn_fuji_info.c
+COMMON_SRCS_BBC += $(SRCDIR)/common/fn_fuji_hsio_get.c $(SRCDIR)/common/fn_fuji_hsio_set.c $(SRCDIR)/platform/bbc/fn_fuji_hsio_call.c
 
 # BBC fn_appstore_read/write are supplied by platform/bbc assembly sources.
 # Other platforms retain the portable implementations in COMMON_SRCS_DEFAULT.

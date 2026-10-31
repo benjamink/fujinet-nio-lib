@@ -102,6 +102,8 @@ extern "C" {
 
 /** Firmware version and build profile */
 #define FN_FUJI_CMD_GET_INFO     0x01
+#define FN_FUJI_CMD_GET_HSIO     0x02
+#define FN_FUJI_CMD_SET_HSIO     0x03
 /** Highest GetInfo version this library understands. GetInfo and Wi-Fi
  *  GET_ADAPTER_INFO negotiate: the firmware replies in the lower of the
  *  requested version and its own, so newer and older sides interoperate. */
