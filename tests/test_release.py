@@ -5,6 +5,7 @@ import os
 from pathlib import Path
 import subprocess
 import tempfile
+from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
 import zipfile
@@ -16,6 +17,37 @@ spec.loader.exec_module(release)
 
 
 class ReleaseTest(unittest.TestCase):
+    def test_preparation_preserves_name_through_packaging_and_draft(self):
+        def export_fixture(repo, revision, destination):
+            destination.mkdir()
+            if destination.name != 'fujinet-nio-lib':
+                return
+            (destination / 'include').mkdir()
+            (destination / 'include' / 'fujinet-nio.h').write_text('header')
+            for notice in ('LICENSE', 'THIRD_PARTY.md'):
+                (destination / notice).write_text('notice')
+            build = destination / 'build'
+            build.mkdir()
+            for target in release.TARGETS:
+                ext = 'a' if target in ('amiga', 'amiga-driver', 'linux') else 'lib'
+                (build / f'fujinet-nio-{target}.{ext}').write_bytes(target.encode())
+
+        for selected in ('feral-dragon', 'My custom release'):
+            with self.subTest(selected=selected), tempfile.TemporaryDirectory() as tmp:
+                out = Path(tmp) / 'release'
+                with patch.object(release, 'export_git', side_effect=export_fixture), \
+                     patch.object(release, 'tool_version', return_value='compiler'), \
+                     patch.object(release, 'commit_messages', return_value=[]), \
+                     patch.object(release, 'release_notes', return_value='notes'), \
+                     patch.object(release, 'run', return_value=SimpleNamespace(stdout='driver-commit\n')) as run:
+                    release.prepare('0.2.0', 'source-commit', None, out, Path('/driver'), selected)
+                    release.verify_prepared(out, '0.2.0', 'source-commit', None, [])
+                    saved_name = release.prepared_name(out, set())
+                    release.create_draft('v0.2.0', 'source-commit', '0.2.0', saved_name, out, [])
+                    self.assertEqual(json.loads((out / 'release.json').read_text())['name'], selected)
+                    args = run.call_args.args[0]
+                    self.assertEqual(args[args.index('--title') + 1], f'FujiNet-NIO library 0.2.0 — {selected}')
+
     def test_release_name_is_saved_and_reused(self):
         with tempfile.TemporaryDirectory() as tmp:
             out = Path(tmp)

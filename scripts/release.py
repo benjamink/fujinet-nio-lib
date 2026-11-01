@@ -235,12 +235,12 @@ def prepare(version, revision, base, output, driver, name):
             run(command, cwd=source)
             ext = 'a' if target in ('amiga', 'amiga-driver', 'linux') else 'lib'
             build_name = f'fujinet-nio-{target}.{ext}'
-            name = 'fujinet-nio-atari.lib' if backend else build_name
+            archive_name = 'fujinet-nio-atari.lib' if backend else build_name
             archive = source / 'build' / build_name
             stage = tmp / ('package-' + target)
             stage.mkdir()
             shutil.copytree(source / 'include', stage / 'include')
-            shutil.copy2(archive, stage / name)
+            shutil.copy2(archive, stage / archive_name)
             for notice in ('LICENSE', 'THIRD_PARTY.md'):
                 shutil.copy2(source / notice, stage / notice)
             tool = 'cc65' if target.startswith(('atari-', 'bbc')) else ('watcom' if target.startswith('msdos-') else ('amiga' if target.startswith('amiga') else 'linux'))
