@@ -16,6 +16,35 @@ spec.loader.exec_module(release)
 
 
 class ReleaseTest(unittest.TestCase):
+    def test_release_name_is_saved_and_reused(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp)
+            metadata = out / 'release.json'
+            metadata.write_text(json.dumps({'version': '0.2.0'}))
+            with patch.object(release, 'generate_name', return_value='bright-comet') as generate:
+                self.assertEqual(release.prepared_name(out), 'bright-comet')
+                self.assertEqual(release.prepared_name(out), 'bright-comet')
+                generate.assert_called_once()
+            self.assertEqual(json.loads(metadata.read_text())['name'], 'bright-comet')
+            self.assertEqual(release.prepared_name(out, 'bright-comet'), 'bright-comet')
+            with self.assertRaises(ValueError):
+                release.prepared_name(out, 'other-name')
+
+    def test_custom_name_and_github_title(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp)
+            (out / 'release.json').write_text('{}')
+            self.assertEqual(release.prepared_name(out, 'My release'), 'My release')
+            with patch.object(release, 'run') as run:
+                release.create_draft('v0.2.0', 'abc123', '0.2.0', 'My release', out, ['artifact.zip'])
+            args = run.call_args.args[0]
+            self.assertEqual(args[args.index('--title') + 1], 'FujiNet-NIO library 0.2.0 — My release')
+            self.assertEqual(args[args.index('--target') + 1], 'abc123')
+            self.assertIn('artifact.zip', args)
+        for invalid in ('', ' leading', 'trailing ', 'line\nbreak', 'x' * 81, 42):
+            with self.assertRaises(ValueError):
+                release.validate_name(invalid)
+
     def test_push_requires_explicit_publish(self):
         result = subprocess.run(['python3', str(ROOT / 'scripts/release.py'), '--push', '--suggest'],
                                 cwd=ROOT, text=True, capture_output=True)

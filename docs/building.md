@@ -88,6 +88,11 @@ creates a draft GitHub release with the generated notes and assets, then
 publishes it, downloads the assets to verify them, and fetches the tag locally.
 An existing prepared output is checked against the current
 commit, generated notes and package checksums before it is reused.
+Each release gets a random adjective-noun name, shown in its GitHub title and
+stored in `release.json` during preparation so review and publication use the
+same name. Pass `--name "Your name"` during preparation to choose one instead;
+an already prepared release keeps its existing name. Names are generated locally
+without Docker or a network service. The version remains the release tag.
 Without `--push`, the process does not push commits or update workspace submodule pins.
 For a single command from a clean `master`, add `--push` to `--publish`; it
 pushes the checked commit after preparation and before publishing. It never

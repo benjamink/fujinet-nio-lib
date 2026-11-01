@@ -4,6 +4,7 @@ import argparse
 import hashlib
 import json
 import re
+import secrets
 import shutil
 import subprocess
 import sys
@@ -14,6 +15,12 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 TARGETS = ('atari-compact', 'atari-original', 'bbc', 'bbc-clib',
            'msdos-serial', 'msdos-ioctl', 'msdos-f5', 'amiga', 'amiga-driver', 'linux')
+ADJECTIVES = ('amber', 'bold', 'bright', 'calm', 'clever', 'cosmic', 'daring', 'eager',
+              'gentle', 'golden', 'happy', 'lively', 'lucky', 'merry', 'nimble', 'radiant',
+              'rapid', 'silver', 'steady', 'stellar', 'sunny', 'swift', 'vivid', 'wandering')
+NOUNS = ('badger', 'beacon', 'comet', 'crane', 'dragon', 'falcon', 'firefly', 'fox',
+         'heron', 'lantern', 'lynx', 'meteor', 'orbit', 'otter', 'panda', 'phoenix',
+         'raven', 'rocket', 'sparrow', 'starling', 'tiger', 'voyager', 'willow', 'wren')
 
 
 def run(args, cwd=ROOT, capture=False, check=True):
@@ -26,6 +33,38 @@ def version_tuple(value):
     if not re.fullmatch(r'(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)', value):
         raise ValueError('version must be MAJOR.MINOR.PATCH without a v prefix')
     return tuple(map(int, value.split('.')))
+
+
+def validate_name(name):
+    if not isinstance(name, str) or not name or len(name) > 80 or name != name.strip() or any(ord(c) < 32 or ord(c) == 127 for c in name):
+        raise ValueError('release name must be 1–80 printable characters without surrounding whitespace')
+    return name
+
+
+def generate_name():
+    return f'{secrets.choice(ADJECTIVES)}-{secrets.choice(NOUNS)}'
+
+
+def prepared_name(output, requested=None):
+    """Reuse the reviewed name; give previously prepared releases a stable name."""
+    path = output / 'release.json'
+    metadata = json.loads(path.read_text())
+    current = metadata.get('name')
+    if current is not None:
+        validate_name(current)
+        if requested is not None and requested != current:
+            raise ValueError(f'prepared release is already named {current!r}')
+        return current
+    name = validate_name(requested if requested is not None else generate_name())
+    metadata['name'] = name
+    path.write_text(json.dumps(metadata, indent=2) + '\n')
+    return name
+
+
+def create_draft(tag, revision, version, name, output, assets):
+    run(['gh', 'release', 'create', tag, '--target', revision, '--draft',
+         '--title', f'FujiNet-NIO library {version} — {name}',
+         '--notes-file', str(output / 'RELEASE_NOTES.md'), *assets])
 
 
 def previous_tag():
@@ -99,7 +138,7 @@ def write_package(stage, output):
                 z.writestr(info, path.read_bytes())
 
 
-def prepare(version, revision, base, output, driver):
+def prepare(version, revision, base, output, driver, name):
     output.mkdir(parents=True, exist_ok=False)
     commits = commit_messages(base, revision)
     notes = release_notes(version, base, revision, commits)
@@ -145,7 +184,7 @@ def prepare(version, revision, base, output, driver):
             write_package(stage, output / f'fujinet-nio-lib-{target}-{version}.zip')
     assets = sorted(output.glob('*.zip'))
     (output / 'SHA256SUMS').write_text(''.join(f'{hashlib.sha256(p.read_bytes()).hexdigest()}  {p.name}\n' for p in assets))
-    (output / 'release.json').write_text(json.dumps({'version': version, 'source_commit': revision,
+    (output / 'release.json').write_text(json.dumps({'version': version, 'name': name, 'source_commit': revision,
         'previous_tag': base, 'amiga_driver_commit': driver_commit, 'checks': ['make check'],
         'assets': [p.name for p in assets]}, indent=2) + '\n')
 
@@ -184,10 +223,16 @@ def main():
     p.add_argument('--suggest', action='store_true', help='suggest a version from conventional commit subjects')
     p.add_argument('--since', help='override previous tag for release notes')
     p.add_argument('--output', type=Path, help='new output directory (default build/releases/vVERSION)')
+    p.add_argument('--name', help='release name (default: generate a random adjective-noun name)')
     p.add_argument('--driver', type=Path, default=ROOT.parent / 'fujinet-nio-driver')
     p.add_argument('--publish', action='store_true', help='publish prepared assets and create the GitHub tag')
     p.add_argument('--push', action='store_true', help='push the checked master commit before publishing')
     args = p.parse_args()
+    if args.name is not None:
+        try:
+            validate_name(args.name)
+        except ValueError as exc:
+            p.error(str(exc))
     if args.push and not args.publish:
         p.error('--push requires --publish')
     base = args.since or previous_tag()
@@ -221,10 +266,11 @@ def main():
         run(['make', 'check'])
         with tempfile.TemporaryDirectory(prefix='.nio-release-', dir=output.parent) as temporary:
             stage = Path(temporary) / 'artifacts'
-            prepare(args.version, revision, base, stage, args.driver.resolve())
+            prepare(args.version, revision, base, stage, args.driver.resolve(), args.name or generate_name())
             stage.rename(output)
     verify_prepared(output, args.version, revision, base, commits)
-    print(f'Prepared {tag} at {output}', flush=True)
+    name = prepared_name(output, args.name)
+    print(f'Prepared {tag} — {name} at {output}', flush=True)
     if args.publish:
         if args.push:
             branch = run(['git', 'branch', '--show-current'], capture=True).stdout.strip()
@@ -236,8 +282,7 @@ def main():
         if not remote or remote[0] != revision:
             raise RuntimeError('origin/master does not point to the release commit; push it first')
         assets = sorted(str(p) for p in output.glob('*.zip')) + [str(output / 'SHA256SUMS'), str(output / 'CHANGELOG.md'), str(output / 'release.json')]
-        run(['gh', 'release', 'create', tag, '--target', revision, '--draft', '--title', f'FujiNet-NIO library {args.version}',
-             '--notes-file', str(output / 'RELEASE_NOTES.md'), *assets])
+        create_draft(tag, revision, args.version, name, output, assets)
         run(['gh', 'release', 'edit', tag, '--draft=false'])
         with tempfile.TemporaryDirectory(prefix='nio-release-download-') as downloaded:
             run(['gh', 'release', 'download', tag, '--dir', downloaded])
