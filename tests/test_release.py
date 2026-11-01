@@ -22,19 +22,21 @@ class ReleaseTest(unittest.TestCase):
             metadata = out / 'release.json'
             metadata.write_text(json.dumps({'version': '0.2.0'}))
             with patch.object(release, 'generate_name', return_value='bright-comet') as generate:
-                self.assertEqual(release.prepared_name(out), 'bright-comet')
-                self.assertEqual(release.prepared_name(out), 'bright-comet')
+                self.assertEqual(release.prepared_name(out, set()), 'bright-comet')
+                self.assertEqual(release.prepared_name(out, set()), 'bright-comet')
                 generate.assert_called_once()
             self.assertEqual(json.loads(metadata.read_text())['name'], 'bright-comet')
-            self.assertEqual(release.prepared_name(out, 'bright-comet'), 'bright-comet')
+            self.assertEqual(release.prepared_name(out, set(), 'bright-comet'), 'bright-comet')
             with self.assertRaises(ValueError):
-                release.prepared_name(out, 'other-name')
+                release.prepared_name(out, set(), 'other-name')
+            with self.assertRaisesRegex(ValueError, 'already used'):
+                release.prepared_name(out, {'bright-comet'})
 
     def test_custom_name_and_github_title(self):
         with tempfile.TemporaryDirectory() as tmp:
             out = Path(tmp)
             (out / 'release.json').write_text('{}')
-            self.assertEqual(release.prepared_name(out, 'My release'), 'My release')
+            self.assertEqual(release.prepared_name(out, set(), 'My release'), 'My release')
             with patch.object(release, 'run') as run:
                 release.create_draft('v0.2.0', 'abc123', '0.2.0', 'My release', out, ['artifact.zip'])
             args = run.call_args.args[0]
@@ -44,6 +46,30 @@ class ReleaseTest(unittest.TestCase):
         for invalid in ('', ' leading', 'trailing ', 'line\nbreak', 'x' * 81, 42):
             with self.assertRaises(ValueError):
                 release.validate_name(invalid)
+
+    def test_history_uses_all_pages_and_ignores_unnamed_releases(self):
+        pages = [[{'name': 'FujiNet-NIO library 0.1.0'},
+                  {'name': 'FujiNet-NIO library 0.2.0 — Feral-Dragon'}],
+                 [{'name': 'FujiNet-NIO library 0.3.0 — Mystic-Wisp'}, {'name': None}]]
+        with patch.object(release, 'run') as run:
+            run.return_value.stdout = json.dumps(pages)
+            self.assertEqual(release.used_release_names(), {'feral-dragon', 'mystic-wisp'})
+        self.assertIn('--paginate', run.call_args.args[0])
+        self.assertIn('--slurp', run.call_args.args[0])
+
+    def test_generated_name_skips_used_and_fails_when_exhausted(self):
+        with patch.object(release, 'ADJECTIVES', ('feral',)), \
+             patch.object(release, 'NOUNS', ('dragon', 'wisp')):
+            self.assertEqual(release.generate_name({'feral-dragon'}), 'feral-wisp')
+            with self.assertRaisesRegex(RuntimeError, 'all generated release names'):
+                release.generate_name({'feral-dragon', 'feral-wisp'})
+        with self.assertRaisesRegex(ValueError, 'already used'):
+            release.ensure_unused('FERAL-Dragon', {'feral-dragon'})
+
+    def test_history_failure_does_not_assume_names_are_free(self):
+        with patch.object(release, 'run', side_effect=subprocess.CalledProcessError(1, 'gh')):
+            with self.assertRaisesRegex(RuntimeError, 'cannot check release name history'):
+                release.used_release_names()
 
     def test_push_requires_explicit_publish(self):
         result = subprocess.run(['python3', str(ROOT / 'scripts/release.py'), '--push', '--suggest'],

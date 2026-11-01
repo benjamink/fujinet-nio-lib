@@ -91,8 +91,15 @@ commit, generated notes and package checksums before it is reused.
 Each release gets a random adjective-noun name, shown in its GitHub title and
 stored in `release.json` during preparation so review and publication use the
 same name. Pass `--name "Your name"` during preparation to choose one instead;
-an already prepared release keeps its existing name. Names are generated locally
-without Docker or a network service. The version remains the release tag.
+an already prepared release keeps its existing name. The GitHub release titles
+are the shared history: preparation checks all releases and accessible drafts,
+and publication checks again. Names are compared without regard to case, including
+custom names. Preparing a release therefore requires authenticated `gh` and network
+access; it fails rather than guessing if the history cannot be read. If a name
+chosen during preparation is subsequently taken, prepare a new release with a
+different name. Deleting or renaming a GitHub release removes its original name
+from this history. Avoid concurrent publishers, since checking and creating a
+release are separate operations. The version remains the release tag.
 Without `--push`, the process does not push commits or update workspace submodule pins.
 For a single command from a clean `master`, add `--push` to `--publish`; it
 pushes the checked commit after preparation and before publishing. It never

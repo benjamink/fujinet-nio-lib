@@ -15,13 +15,56 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 TARGETS = ('atari-compact', 'atari-original', 'bbc', 'bbc-clib',
            'msdos-serial', 'msdos-ioctl', 'msdos-f5', 'amiga', 'amiga-driver', 'linux')
-ADJECTIVES = ('amber', 'bold', 'bright', 'calm', 'clever', 'cosmic', 'daring', 'eager',
-              'gentle', 'golden', 'happy', 'lively', 'lucky', 'merry', 'nimble', 'radiant',
-              'rapid', 'silver', 'steady', 'stellar', 'sunny', 'swift', 'vivid', 'wandering')
-NOUNS = ('badger', 'beacon', 'comet', 'crane', 'dragon', 'falcon', 'firefly', 'fox',
-         'heron', 'lantern', 'lynx', 'meteor', 'orbit', 'otter', 'panda', 'phoenix',
-         'raven', 'rocket', 'sparrow', 'starling', 'tiger', 'voyager', 'willow', 'wren')
 
+
+# ADJECTIVES = ('amber', 'bold', 'bright', 'calm', 'clever', 'cosmic', 'daring', 'eager',
+#               'gentle', 'golden', 'happy', 'lively', 'lucky', 'merry', 'nimble', 'radiant',
+#               'rapid', 'silver', 'steady', 'stellar', 'sunny', 'swift', 'vivid', 'wandering')
+# NOUNS = ('badger', 'beacon', 'comet', 'crane', 'dragon', 'falcon', 'firefly', 'fox',
+#          'heron', 'lantern', 'lynx', 'meteor', 'orbit', 'otter', 'panda', 'phoenix',
+#          'raven', 'rocket', 'sparrow', 'starling', 'tiger', 'voyager', 'willow', 'wren')
+
+
+ADJECTIVES = (
+    'arcane', 'ashen', 'azerite', 'blighted', 'bloodied',
+    'celestial', 'chaotic', 'corrupted', 'crimson', 'cursed',
+    'darkened', 'demonic', 'draconic', 'dwarven', 'elven',
+    'enchanted', 'eternal', 'felbound', 'feral', 'forsaken',
+    'frostbitten', 'ghostly', 'glorious', 'gnomish', 'hallowed',
+    'haunted', 'heroic', 'holy', 'infernal', 'ironbound',
+    'legendary', 'luminous', 'mighty', 'mystic', 'necrotic',
+    'netherborn', 'primal', 'radiant', 'runic', 'savage',
+    'shadowy', 'spectral', 'stormforged', 'thundering', 'titanic',
+    'twilight', 'undying', 'vengeful', 'voidtouched', 'withered',
+)
+
+NOUNS = (
+    'abomination', 'anubisath', 'banshee', 'basilisk', 'behemoth',
+    'chimera', 'deathwing', 'demon', 'direwolf', 'drake',
+    'dragonhawk', 'dreadlord', 'dryad', 'elemental', 'felguard',
+    'furbolg', 'gargoyle', 'ghoul', 'gnoll', 'golem',
+    'gryphon', 'harpy', 'hydra', 'imp', 'infernal',
+    'keeper', 'kobold', 'kodo', 'lich', 'manticore',
+    'murloc', 'naga', 'nerubian', 'ogre', 'oracle',
+    'pandaren', 'phoenix', 'quilen', 'raptor', 'revenant',
+    'satyr', 'scourge', 'spirit', 'tauren', 'treant',
+    'valkyr', 'warg', 'whelp', 'wendigo', 'wisp',
+)
+
+LOCATIONS = (
+    'azeroth', 'stormwind', 'ironforge', 'darnassus', 'exodar',
+    'orgrimmar', 'thunderbluff', 'undercity', 'silvermoon', 'dalaran',
+    'shattrath', 'suramar', 'boralus', 'zuldazar', 'valdrakken',
+    'elwynn', 'westfall', 'redridge', 'duskwood', 'stranglethorn',
+    'darkshore', 'ashenvale', 'felwood', 'winterspring', 'tanaris',
+    'ungoro', 'silithus', 'desolace', 'feralas', 'mulgore',
+    'durotar', 'barrens', 'thousandneedles', 'dustwallow', 'azshara',
+    'northrend', 'icecrown', 'dragonblight', 'stormpeaks', 'grizzlyhills',
+    'outland', 'nagrand', 'netherstorm', 'shadowmoon', 'hellfire',
+    'pandaria', 'jadeforest', 'kunlai', 'timelessisle', 'nazjatar',
+)
+
+NOUNS = NOUNS + LOCATIONS
 
 def run(args, cwd=ROOT, capture=False, check=True):
     return subprocess.run(args, cwd=cwd, check=check, text=True,
@@ -41,11 +84,39 @@ def validate_name(name):
     return name
 
 
-def generate_name():
-    return f'{secrets.choice(ADJECTIVES)}-{secrets.choice(NOUNS)}'
+def used_release_names():
+    """Read every published release and accessible draft, including all pages."""
+    try:
+        result = run(['gh', 'api', '--paginate', '--slurp',
+                      'repos/{owner}/{repo}/releases?per_page=100'], capture=True)
+    except subprocess.CalledProcessError as exc:
+        raise RuntimeError('cannot check release name history on GitHub; check gh authentication and network') from exc
+    pages = json.loads(result.stdout)
+    names = set()
+    for page in pages:
+        for item in page:
+            title = item.get('name') or ''
+            match = re.fullmatch(r'FujiNet-NIO library \d+\.\d+\.\d+ — (.+)', title)
+            if match:
+                names.add(match.group(1).casefold())
+    return names
 
 
-def prepared_name(output, requested=None):
+def ensure_unused(name, used):
+    if name.casefold() in used:
+        raise ValueError(f'release name {name!r} is already used on GitHub')
+    return name
+
+
+def generate_name(used):
+    available = [f'{adjective}-{noun}' for adjective in ADJECTIVES for noun in NOUNS
+                 if f'{adjective}-{noun}'.casefold() not in used]
+    if not available:
+        raise RuntimeError('all generated release names have been used; expand the name pool or specify a new name')
+    return secrets.choice(available)
+
+
+def prepared_name(output, used, requested=None):
     """Reuse the reviewed name; give previously prepared releases a stable name."""
     path = output / 'release.json'
     metadata = json.loads(path.read_text())
@@ -54,8 +125,8 @@ def prepared_name(output, requested=None):
         validate_name(current)
         if requested is not None and requested != current:
             raise ValueError(f'prepared release is already named {current!r}')
-        return current
-    name = validate_name(requested if requested is not None else generate_name())
+        return ensure_unused(current, used)
+    name = ensure_unused(validate_name(requested if requested is not None else generate_name(used)), used)
     metadata['name'] = name
     path.write_text(json.dumps(metadata, indent=2) + '\n')
     return name
@@ -261,15 +332,17 @@ def main():
         if not args.publish:
             p.error(f'output directory already exists: {output}')
     else:
+        used = used_release_names()
+        name = ensure_unused(args.name, used) if args.name is not None else generate_name(used)
         output.parent.mkdir(parents=True, exist_ok=True)
         print('Running make check...', flush=True)
         run(['make', 'check'])
         with tempfile.TemporaryDirectory(prefix='.nio-release-', dir=output.parent) as temporary:
             stage = Path(temporary) / 'artifacts'
-            prepare(args.version, revision, base, stage, args.driver.resolve(), args.name or generate_name())
+            prepare(args.version, revision, base, stage, args.driver.resolve(), name)
             stage.rename(output)
     verify_prepared(output, args.version, revision, base, commits)
-    name = prepared_name(output, args.name)
+    name = prepared_name(output, used_release_names(), args.name)
     print(f'Prepared {tag} — {name} at {output}', flush=True)
     if args.publish:
         if args.push:
@@ -282,6 +355,7 @@ def main():
         if not remote or remote[0] != revision:
             raise RuntimeError('origin/master does not point to the release commit; push it first')
         assets = sorted(str(p) for p in output.glob('*.zip')) + [str(output / 'SHA256SUMS'), str(output / 'CHANGELOG.md'), str(output / 'release.json')]
+        ensure_unused(name, used_release_names())
         create_draft(tag, revision, args.version, name, output, assets)
         run(['gh', 'release', 'edit', tag, '--draft=false'])
         with tempfile.TemporaryDirectory(prefix='nio-release-download-') as downloaded:
