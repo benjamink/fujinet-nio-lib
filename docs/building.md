@@ -61,6 +61,39 @@ make clean
 
 ## Build Output
 
+### Preparing a release
+
+With the workspace environment and all configured toolchains available:
+
+```sh
+python3 scripts/release.py --suggest
+python3 scripts/release.py 0.1.0
+```
+
+The suggestion uses reachable version tags, conventional `feat` and
+breaking-change markers, and common feature verbs; inspect it rather than treating it as a compatibility
+guarantee. Preparation requires a clean committed tree, runs `make check`,
+exports the committed source and the committed Amiga driver ABI, and writes
+versioned ZIPs for Atari compact and original, BBC, BBC clib, all three MS-DOS
+transports, Amiga application and driver, and Linux. `RELEASE_NOTES.md` and
+`CHANGELOG.md` list every non-merge commit and a diffstat; `SHA256SUMS` and
+per-package manifests record artifact and build provenance. The first release
+uses all prior history; `--since <tag>` selects another notes baseline.
+The release tag and package manifests are the version authority; there is no
+separate source-tree version file to update by hand.
+
+Publishing is explicit: push the tested commit to `origin/master`, then run
+`python3 scripts/release.py 0.1.0 --publish`. It verifies the remote branch,
+creates a draft GitHub release with the generated notes and assets, then
+publishes it, downloads the assets to verify them, and fetches the tag locally.
+An existing prepared output is checked against the current
+commit, generated notes and package checksums before it is reused.
+The process does not push commits or update workspace submodule pins.
+
+Set `--driver /path/to/fujinet-nio-driver` if the Amiga driver is not a sibling
+checkout. Its committed HEAD is exported and recorded in Amiga manifests.
+Atari PBI HSIO get/set requires compatible FujiNet-NIO firmware.
+
 ### Standalone Atari package
 
 Build a package from a committed revision (uncommitted changes are excluded):
