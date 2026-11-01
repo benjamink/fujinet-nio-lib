@@ -1,10 +1,12 @@
 import importlib.util
 import hashlib
 import json
+import os
 from pathlib import Path
 import subprocess
 import tempfile
 import unittest
+from unittest.mock import patch
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -40,6 +42,18 @@ class ReleaseTest(unittest.TestCase):
         self.assertIn('## Changes', notes)
         self.assertIn('## Changed files', notes)
         self.assertIn(commits[-1][1], notes)
+
+    def test_notes_ignore_always_colour_git_configuration(self):
+        config = {'GIT_CONFIG_COUNT': '1', 'GIT_CONFIG_KEY_0': 'color.ui',
+                  'GIT_CONFIG_VALUE_0': 'always'}
+        with patch.dict(os.environ, config):
+            raw = release.run(['git', 'diff', '--stat',
+                               '4b825dc642cb6eb9a060e54bf8d69288fbee4904', 'HEAD'],
+                              capture=True).stdout
+            self.assertIn('\x1b[', raw)
+            notes = release.release_notes('0.1.0', None, 'HEAD', [])
+        self.assertIn('## Changed files', notes)
+        self.assertNotIn('\x1b', notes)
 
     def test_prepared_assets_are_checked_before_publish(self):
         commits = release.commit_messages(None, 'HEAD')

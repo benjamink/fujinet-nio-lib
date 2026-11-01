@@ -66,7 +66,7 @@ def release_notes(version, base, revision, commits):
              f'Changes since `{base}`.' if base else 'Initial release; changes from the beginning of the repository.',
              '', '## Changes', '']
     lines += [f'- {subject} (`{sha[:10]}`)' for sha, subject, _ in commits]
-    stats = run(['git', 'diff', '--stat', base or '4b825dc642cb6eb9a060e54bf8d69288fbee4904', revision], capture=True).stdout.rstrip()
+    stats = run(['git', 'diff', '--no-color', '--stat', base or '4b825dc642cb6eb9a060e54bf8d69288fbee4904', revision], capture=True).stdout.rstrip()
     lines += ['', '## Changed files', '', '```', stats, '```', '',
               'Each platform archive includes its toolchain, build command, source revision and checksum in manifest.json.',
               'Atari HSIO get/set requires FujiNet-NIO firmware implementing FujiDevice GetHsio and SetHsio.', '']
