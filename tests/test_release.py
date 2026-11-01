@@ -18,6 +18,7 @@ class ReleaseTest(unittest.TestCase):
         for invalid in ('v0.1.0', '0.01.0', '1.2', '1.2.3-beta', '../1.2.3'):
             with self.assertRaises(ValueError): release.version_tuple(invalid)
         self.assertEqual(release.suggest(None, ['feat: first']), '0.1.0')
+        self.assertIsNone(release.suggest('v0.1.0', []))
         self.assertEqual(release.suggest('v0.1.0', ['fix: bug']), '0.1.1')
         self.assertEqual(release.suggest('v0.1.0', ['feat(net): feature']), '0.2.0')
         self.assertEqual(release.suggest('v0.1.0', ['Add Atari support']), '0.2.0')

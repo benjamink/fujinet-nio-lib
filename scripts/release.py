@@ -42,6 +42,8 @@ def previous_tag():
 def suggest(tag, messages):
     if not tag:
         return '0.1.0'
+    if not messages:
+        return None
     major, minor, patch = version_tuple(tag[1:])
     if any('BREAKING CHANGE:' in msg or re.search(r'(?m)^\w+(?:\([^\n]*\))?!:', msg) for msg in messages):
         return f'{major + 1}.0.0'
@@ -189,7 +191,7 @@ def main():
     revision = run(['git', 'rev-parse', '--verify', 'HEAD^{commit}'], capture=True).stdout.strip()
     commits = commit_messages(base, revision)
     if args.suggest:
-        print(suggest(base, [subject + '\n' + body for _, subject, body in commits]))
+        print(suggest(base, [subject + '\n' + body for _, subject, body in commits]) or f'No changes since {base}')
         return
     if not args.version:
         p.error('provide a version, or use --suggest')
@@ -199,6 +201,8 @@ def main():
         p.error(str(exc))
     if base and not args.since and number <= version_tuple(base[1:]):
         p.error('version must be newer than the latest reachable version tag')
+    if base and not commits:
+        p.error(f'no commits since {base}')
     if run(['git', 'status', '--porcelain'], capture=True).stdout.strip():
         p.error('commit or remove working-tree changes before preparing a release')
     tag = 'v' + args.version
