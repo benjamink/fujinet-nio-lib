@@ -186,7 +186,10 @@ def main():
     p.add_argument('--output', type=Path, help='new output directory (default build/releases/vVERSION)')
     p.add_argument('--driver', type=Path, default=ROOT.parent / 'fujinet-nio-driver')
     p.add_argument('--publish', action='store_true', help='publish prepared assets and create the GitHub tag')
+    p.add_argument('--push', action='store_true', help='push the checked master commit before publishing')
     args = p.parse_args()
+    if args.push and not args.publish:
+        p.error('--push requires --publish')
     base = args.since or previous_tag()
     revision = run(['git', 'rev-parse', '--verify', 'HEAD^{commit}'], capture=True).stdout.strip()
     commits = commit_messages(base, revision)
@@ -223,6 +226,11 @@ def main():
     verify_prepared(output, args.version, revision, base, commits)
     print(f'Prepared {tag} at {output}', flush=True)
     if args.publish:
+        if args.push:
+            branch = run(['git', 'branch', '--show-current'], capture=True).stdout.strip()
+            if branch != 'master':
+                raise RuntimeError('--push requires the master branch')
+            run(['git', 'push', 'origin', 'HEAD:refs/heads/master'])
         # Publish only the exact current default branch, not an unpushed commit.
         remote = run(['git', 'ls-remote', '--exit-code', 'origin', 'refs/heads/master'], capture=True).stdout.split()
         if not remote or remote[0] != revision:

@@ -2,6 +2,7 @@ import importlib.util
 import hashlib
 import json
 from pathlib import Path
+import subprocess
 import tempfile
 import unittest
 import zipfile
@@ -13,6 +14,12 @@ spec.loader.exec_module(release)
 
 
 class ReleaseTest(unittest.TestCase):
+    def test_push_requires_explicit_publish(self):
+        result = subprocess.run(['python3', str(ROOT / 'scripts/release.py'), '--push', '--suggest'],
+                                cwd=ROOT, text=True, capture_output=True)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('--push requires --publish', result.stderr)
+
     def test_version_and_suggestions(self):
         self.assertEqual(release.version_tuple('0.1.0'), (0, 1, 0))
         for invalid in ('v0.1.0', '0.01.0', '1.2', '1.2.3-beta', '../1.2.3'):

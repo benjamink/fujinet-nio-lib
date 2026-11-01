@@ -88,7 +88,10 @@ creates a draft GitHub release with the generated notes and assets, then
 publishes it, downloads the assets to verify them, and fetches the tag locally.
 An existing prepared output is checked against the current
 commit, generated notes and package checksums before it is reused.
-The process does not push commits or update workspace submodule pins.
+Without `--push`, the process does not push commits or update workspace submodule pins.
+For a single command from a clean `master`, add `--push` to `--publish`; it
+pushes the checked commit after preparation and before publishing. It never
+force-pushes and does not update workspace submodule pins.
 
 Set `--driver /path/to/fujinet-nio-driver` if the Amiga driver is not a sibling
 checkout. Its committed HEAD is exported and recorded in Amiga manifests.
