@@ -96,7 +96,8 @@ def used_release_names():
     for page in pages:
         for item in page:
             title = item.get('name') or ''
-            match = re.fullmatch(r'FujiNet-NIO library \d+\.\d+\.\d+ — (.+)', title)
+            match = (re.fullmatch(r'(.+) \(\d+\.\d+\.\d+\)', title) or
+                     re.fullmatch(r'FujiNet-NIO library \d+\.\d+\.\d+ — (.+)', title))
             if match:
                 names.add(match.group(1).casefold())
     return names
@@ -134,7 +135,7 @@ def prepared_name(output, used, requested=None):
 
 def create_draft(tag, revision, version, name, output, assets):
     run(['gh', 'release', 'create', tag, '--target', revision, '--draft',
-         '--title', f'FujiNet-NIO library {version} — {name}',
+         '--title', f'{name} ({version})',
          '--notes-file', str(output / 'RELEASE_NOTES.md'), *assets])
 
 

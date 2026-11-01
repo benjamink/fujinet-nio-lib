@@ -88,7 +88,7 @@ creates a draft GitHub release with the generated notes and assets, then
 publishes it, downloads the assets to verify them, and fetches the tag locally.
 An existing prepared output is checked against the current
 commit, generated notes and package checksums before it is reused.
-Each release gets a random adjective-noun name, shown in its GitHub title and
+Each release gets a random adjective-noun name, shown as `name (version)` in its GitHub title and
 stored in `release.json` during preparation so review and publication use the
 same name. Pass `--name "Your name"` during preparation to choose one instead;
 an already prepared release keeps its existing name. The GitHub release titles

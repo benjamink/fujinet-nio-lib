@@ -46,7 +46,7 @@ class ReleaseTest(unittest.TestCase):
                     release.create_draft('v0.2.0', 'source-commit', '0.2.0', saved_name, out, [])
                     self.assertEqual(json.loads((out / 'release.json').read_text())['name'], selected)
                     args = run.call_args.args[0]
-                    self.assertEqual(args[args.index('--title') + 1], f'FujiNet-NIO library 0.2.0 — {selected}')
+                    self.assertEqual(args[args.index('--title') + 1], f'{selected} (0.2.0)')
 
     def test_release_name_is_saved_and_reused(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -72,7 +72,7 @@ class ReleaseTest(unittest.TestCase):
             with patch.object(release, 'run') as run:
                 release.create_draft('v0.2.0', 'abc123', '0.2.0', 'My release', out, ['artifact.zip'])
             args = run.call_args.args[0]
-            self.assertEqual(args[args.index('--title') + 1], 'FujiNet-NIO library 0.2.0 — My release')
+            self.assertEqual(args[args.index('--title') + 1], 'My release (0.2.0)')
             self.assertEqual(args[args.index('--target') + 1], 'abc123')
             self.assertIn('artifact.zip', args)
         for invalid in ('', ' leading', 'trailing ', 'line\nbreak', 'x' * 81, 42):
@@ -82,10 +82,10 @@ class ReleaseTest(unittest.TestCase):
     def test_history_uses_all_pages_and_ignores_unnamed_releases(self):
         pages = [[{'name': 'FujiNet-NIO library 0.1.0'},
                   {'name': 'FujiNet-NIO library 0.2.0 — Feral-Dragon'}],
-                 [{'name': 'FujiNet-NIO library 0.3.0 — Mystic-Wisp'}, {'name': None}]]
+                 [{'name': 'Mystic-Wisp (0.3.0)'}, {'name': 'Another (name) (0.4.0)'}, {'name': None}]]
         with patch.object(release, 'run') as run:
             run.return_value.stdout = json.dumps(pages)
-            self.assertEqual(release.used_release_names(), {'feral-dragon', 'mystic-wisp'})
+            self.assertEqual(release.used_release_names(), {'feral-dragon', 'mystic-wisp', 'another (name)'})
         self.assertIn('--paginate', run.call_args.args[0])
         self.assertIn('--slurp', run.call_args.args[0])
 
