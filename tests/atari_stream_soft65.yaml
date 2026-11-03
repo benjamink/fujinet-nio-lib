@@ -1,0 +1,18 @@
+name: Experimental Atari small stream independent transaction vectors
+target: none
+compiler: cc65
+config_file: atari_stream_soft65.cfg
+c_flags:
+  - -Osir
+  - -O
+  - -D__ATARI__
+src_files:
+  - atari_stream_soft65.c
+  - atari_stream_adapter.s
+  - atari_stream_soft65_start.s
+include_paths:
+  - ../include
+ld_flags:
+  - -t
+  - none
+test_script: atari_stream_soft65.txt

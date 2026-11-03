@@ -6,3 +6,7 @@
 
 This repository is licensed under the GNU General Public License version 3 (`LICENSE`), which the
 "or later" of the original permits.
+
+The optional Atari small-stream polled SIO driver (`src/platform/atari/fn_stream_sio.s`)
+is derived from Michael Sternberg's SYN-ACK WIRE Atari `net_sio.s`, commit
+`3b6fa091`, under GPL-3.0. It is isolated from the existing OS-SIO transport.

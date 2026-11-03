@@ -1,0 +1,10 @@
+name: Polled stream transmitter active-low readiness regression
+configs:
+  - ../../cc65-clib/tests/harness/harness.yaml
+src_files:
+  - atari_stream_driver_soft65.s
+  - ../src/platform/atari/fn_stream_sio.s
+ld_flags:
+  - -t
+  - none
+test_script: atari_stream_driver_soft65.txt

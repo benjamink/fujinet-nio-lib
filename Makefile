@@ -289,3 +289,9 @@ help:
 	@echo "Output:"
 	@echo "  Libraries are placed in build/"
 	@echo "  Object files are placed in obj/"
+
+.PHONY: test-atari-stream
+test-atari-stream:
+	soft65c02_unit -b build/tests/atari-stream -i tests/atari_stream_soft65.yaml
+	soft65c02_unit -b build/tests/atari-stream-driver -i tests/atari_stream_driver_soft65.yaml
+test: test-atari-stream

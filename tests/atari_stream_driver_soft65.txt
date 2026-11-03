@@ -1,0 +1,9 @@
+memory load atari "${BINARY_PATH}"
+symbols load "${SYMBOLS_PATH}"
+registers flush
+run $init_harness until CP = $end_init_harness
+assert $_test_result = 0x00 $$ready-low SEROR and SEROC return without a clock tick$$
+assert $_test_result + 1 = 0x76 $$readiness polling preserves byte index Y$$
+assert $_test_result + 2 = 0x37 $$channel 1 untouched$$
+assert $_test_result + 3 = 0x59 $$channel 2 untouched$$
+assert $_test_result + 4 = 0xC0 $$VBI and DLI enable untouched$$

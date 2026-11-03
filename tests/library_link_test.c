@@ -1,4 +1,11 @@
 #include <stdint.h>
+#include "fn_stream.h"
+#ifdef __ATARI__
+void reference_stream_entries(fn_stream_io_t *io) {
+    fn_stream_init(io); fn_stream_open(io); fn_stream_read(io);
+    fn_stream_write(io); fn_stream_close(io); fn_stream_appkey(io);
+}
+#endif
 
 #include "fn_raw.h"
 #include "fn_legacy_appkey.h"

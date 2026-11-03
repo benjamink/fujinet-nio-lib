@@ -1,0 +1,14 @@
+memory load atari "${BINARY_PATH}"
+symbols load "${SYMBOLS_PATH}"
+registers flush
+run $init_harness until CP = $end_init_harness
+assert $_test_result + 0 = 0x00 $$capability query and token$$
+assert $_test_result + 1 = 0x00 $$120-byte read and sequence$$
+assert $_test_result + 2 = 0x00 $$context guard bytes$$
+assert $_test_result + 3 = 0x00 $$partial write count$$
+assert $_test_result + 4 = 0x00 $$bounded submit retries retain request$$
+assert $_test_result + 5 = 0x00 $$wrong token retries retain sequence$$
+assert $_test_result + 6 = 0x00 $$would-block advances sequence$$
+assert $_test_result + 7 = 0x00 $$oversized read rejected locally$$
+assert $_test_result + 8 = 0x00 $$zero read rejected locally$$
+assert $_test_result + 9 = 0x00 $$unsupported version rejected$$
