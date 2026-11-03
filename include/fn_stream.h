@@ -1,7 +1,7 @@
 #ifndef FN_STREAM_H
 #define FN_STREAM_H
 #include <stdint.h>
-/* EXPERIMENTAL Atari standard-speed stream API. Requires matching firmware.
+/* Atari standard-speed stream API v1. Requires matching firmware.
  * One foreground caller, no calls from interrupts. Context and both buffers are
  * caller-owned and must survive retries. All registers/flags may change; A/X
  * carries the context pointer and A/X returns uint8 status (X=0). No C stack args.

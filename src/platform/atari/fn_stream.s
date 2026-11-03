@@ -1,4 +1,4 @@
-; Experimental small stream API, one AX block pointer, no cc65 runtime.
+; Small stream API v1, one AX block pointer, no cc65 runtime.
 .macpack longbranch
 .export _fn_stream_init, _fn_stream_open, _fn_stream_read
 .export _fn_stream_write, _fn_stream_close, _fn_stream_appkey

@@ -217,3 +217,10 @@ Contributions are welcome! Please ensure:
 - [fujinet-nio](https://github.com/FujiNetWIFI/fujinet-nio) - FujiNet firmware rewrite
 - [fujinet-lib](https://github.com/FujiNetWIFI/fujinet-lib) - Legacy library (reference)
 - [cc65](https://github.com/cc65/cc65) - 6502 C compiler
+
+## Small Atari TCP clients
+
+The optional [Atari small-stream API](docs/atari-small-stream.md) trades general
+service coverage and throughput for a compact 6502 client with application-owned
+buffers. Read its interrupt/audio, partial-transfer and retry responsibilities
+before choosing it over the general API. It requires version 1 capable firmware.
