@@ -40,8 +40,9 @@ None.
 6. HTTP headers: extend the ROM open contract with bounded caller-owned input;
    test malformed lengths, credentials, cleanup and old-ROM failure behavior.
 
-Do not claim percentage savings until measured. Resident ROM space is limited;
-new OSWORD reasons must retain old callers and fail safely on older ROMs.
+Do not claim percentage savings until measured. Resident ROM space is limited.
+Deploy the library and current ROM together. Preserve stable interfaces and
+normal error handling; do not add alternate implementations for older ROMs.
 Use soft65c02 for independent ABI/boundary/cycle vectors and Beebium for actual
 MOS integration. General library changes also require complete `make check`.
 
