@@ -69,3 +69,26 @@ Each public Wi-Fi operation is now a separate archive member. Shared host wire
 vectors run against the BBC implementation as well as the general implementation.
 This also caught and fixed configuration writes passing a null reply-length
 pointer to the ROM bridge, which requires a valid output pointer.
+
+## Bulk read (OSWORD &78 reason &07)
+
+New ROMs copy the current buffered chunk directly into caller memory. The
+library loops for larger reads, preserving the no-probe/NotReady boundary;
+old ROMs fall back to the original OSBGET loop. Count and flags are initialized
+so NotReady cannot leave stale output values. The library adds an 11-byte
+control block; the ROM adds 212 bytes and no persistent workspace (BBC ROM
+free space 958 -> 746 bytes at this stage).
+
+soft65c02 cycle measurements use preloaded buffers, excluding network time:
+
+| Bytes | Bulk | Direct BGET byte loop |
+|---:|---:|---:|
+| 1 | 1145 | 650 |
+| 32 | 1796 | 20335 |
+| 120 | 3644 | 76215 |
+| 255 | 6477 | 161940 |
+
+The baseline directly calls the ROM BGET entry, omitting MOS and library loop
+costs. A 512-byte three-chunk transfer with two stub refills took 14722 cycles;
+this is not a measured network throughput figure. Both new- and old-ROM
+Beebium TCP/HTTP tests pass (five each), verifying fallback behavior.
