@@ -295,3 +295,9 @@ test-atari-stream:
 	soft65c02_unit -b build/tests/atari-stream -i tests/atari_stream_soft65.yaml
 	soft65c02_unit -b build/tests/atari-stream-driver -i tests/atari_stream_driver_soft65.yaml
 test: test-atari-stream
+
+.PHONY: test-bbc-api-link
+test-bbc-api-link: bbc bbc-clib
+	python3 tests/run_bbc_api_link_test.py
+
+test: test-bbc-api-link
