@@ -11,8 +11,8 @@ communicate with FujiNet NIO devices. It provides:
 
 - **Handle-based API** - Simple, intuitive session management
 - **FujiBus protocol** - Binary protocol with shared packet/checksum handling
-- **Multi-platform support** - Atari, BBC, MS-DOS, Amiga, and Linux
-- **Multi-compiler support** - CC65, Open Watcom, GCC, and amiga-gcc
+- **Multi-platform support** - Atari, BBC, MS-DOS, Amiga, Palm OS, and Linux
+- **Multi-compiler support** - CC65, Open Watcom, GCC, amiga-gcc, and prc-tools
 - **HTTP and TCP/TLS** - All protocols supported
 
 ## Features
@@ -33,6 +33,7 @@ communicate with FujiNet NIO devices. It provides:
 - **[API Reference](docs/api.md)** - Complete API documentation
 - **[Building](docs/building.md)** - Build instructions for all platforms
 - **[Transport Backends](docs/transport-backends.md)** - How platform library targets map to NIO channels
+- **[Palm OS Springboard](docs/palmos/springboard.md)** - Handspring Visor over a Springboard module's CS1 link
 - **[Examples](examples/README.md)** - Example applications and usage
 
 The legacy appkey compatibility functions are available via
@@ -63,6 +64,10 @@ make amiga
 
 # Build the resident Amiga driver library variant
 make amiga-driver
+
+# Build the Palm OS (Handspring Springboard) library; needs prc-tools and
+# sbnio.h from fujinet-nio (see docs/palmos/springboard.md)
+make palmos-springboard
 ```
 
 ### Basic HTTP GET
@@ -187,6 +192,7 @@ int main(void) {
 | Linux | stream over POSIX serial/PTY | GCC | ✅ Working |
 | Amiga applications | `fujinet-nio.device` broker | amiga-gcc | ✅ Working |
 | Amiga resident driver | `fujinet-nio.device` broker | amiga-gcc | ✅ Working |
+| Palm OS (Handspring Visor) | Springboard module CS1 link | prc-tools | ✅ Working |
 
 ## Differences from fujinet-lib
 

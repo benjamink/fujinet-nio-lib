@@ -906,6 +906,37 @@ void fn_amiga_transport_last_serial_detail(uint8_t *native_error,
                                             uint16_t *status);
 #endif
 
+#ifdef __palmos__
+/* Springboard CS1 link, for tools that need more than fn_init(). The SBN_*
+ * names (registers, results) are in sbnio.h from fujinet-nio's
+ * bridges/rp2350-springboard/include. */
+
+/* Find the module and check its CS1 registers. Returns the CS1 base, 0 if
+ * none. fn_palmos_close forgets it so the next open looks again. */
+uint32_t fn_palmos_open(void);
+void fn_palmos_close(void);
+uint32_t fn_palmos_cs0(void);
+uint32_t fn_palmos_cs1(void);
+uint16_t fn_palmos_card(void);
+
+/* One 16-bit register read at an SBN_R_* offset, one write to an SBN_W_*
+ * register; 0 and nothing while no module is open. */
+uint16_t fn_palmos_read(uint16_t offset);
+void fn_palmos_write(uint16_t reg, uint16_t value);
+
+/* Send one raw FujiBus packet and wait for its reply. Returns an SBN_RES_*
+ * value, FN_PALMOS_NO_ANSWER (no module, or no reply published) or
+ * FN_PALMOS_BAD_READ (reply never read back with the right check). A longer
+ * reply is cut to cap bytes. */
+#define FN_PALMOS_NO_ANSWER 0xFFFFu
+#define FN_PALMOS_BAD_READ  0xFFFEu
+uint16_t fn_palmos_exchange(const uint8_t *req, uint16_t len,
+                            uint8_t *resp, uint16_t cap, uint16_t *resp_len);
+
+/* One line of text to the firmware console. */
+void fn_palmos_log(const char *text);
+#endif
+
 uint8_t fn_write(fn_handle_t handle,
                  uint32_t offset,
                  const uint8_t *data,

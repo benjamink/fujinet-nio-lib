@@ -52,6 +52,7 @@ driver ABI.
 | `bbc`, `bbc-clib` | `fn-rom`/MOS channels | Does not use the common direct transport stack. BBC delegates transport details to `fn-rom`. |
 | `atari` | SIO | Direct target-specific transport. |
 | `palmos-serial` | common stream transport over the Palm OS cradle serial port | New Serial Manager at 115200 baud, or the serial library before Palm OS 3.3. Reclaims the line after an idle spell (`FN_STREAM_WAKE_IDLE_MS`) because NIO may lend it to HotSync. |
+| `palmos-springboard` | Springboard module CS1 link | Packet-native; the module firmware owns the link to NIO. |
 
 ## Atari SIO Backend Notes
 
@@ -108,6 +109,23 @@ The library sends one complete packet-native `W` and reads one complete,
 ready-length `R`; a bridge must neither chunk, pad, nor SLIP-frame either
 payload. A queued response remains available until the matching exact-length
 `R` is accepted.
+
+## Palm OS Springboard Backend Notes
+
+The `palmos-springboard` target is a packet-native backend like Atari SIO. The
+Handspring Visor writes each FujiBus request packet, unframed, into an RP2350
+module's CS1 registers with 16-bit `MOVE.W` cycles and reads the reply packet
+back the same way. The module firmware owns the link to NIO (NIO's packet link
+over USB), so the library has no byte channel and does not use
+`fn_transport_stream.c`.
+
+There is one outstanding request. Every request carries a check word and the
+firmware refuses a damaged one without forwarding it, so the client may send it
+again; a reply that fails its check is read again from the same place. A
+request that gets no reply is not sent again, since NIO may have acted on it.
+The register map and result codes are the shared ABI header `sbnio.h`, which
+lives in `fujinet-nio` and is not copied here. See
+[Palm OS Springboard](palmos/springboard.md).
 
 ## MS-DOS Backends
 

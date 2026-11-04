@@ -43,6 +43,9 @@ This document describes how to build the fujinet-nio-lib library for various pla
   ```bash
   ../fujinet-palm/docker/palm-build.sh make palmos-serial
   ```
+- `sbnio.h` from a `fujinet-nio` checkout for `palmos-springboard`
+  (`bridges/rp2350-springboard/include`), found as `../fujinet-nio` unless
+  `SBNIO_ABI_INCLUDE` says otherwise; see [Palm OS Springboard](palmos/springboard.md)
 
 ## Building
 
@@ -64,6 +67,7 @@ make linux      # Native Linux (for testing)
 make amiga      # Amiga application archive
 make amiga-driver # Resident-driver archive (no application atexit cleanup)
 make palmos-serial # Palm OS 3.1+ cradle serial port
+make palmos-springboard # Palm OS Springboard CS1 link
 ```
 
 ### Clean build artifacts:
@@ -154,6 +158,7 @@ fujinet-nio-lib/
     fujinet-nio-amiga.a          # Amiga application library
     fujinet-nio-amiga-driver.a   # Amiga resident-driver library
     fujinet-nio-palmos-serial.a  # Palm OS cradle serial library
+    fujinet-nio-palmos-springboard.a # Palm OS Springboard library
 ```
 
 ## Palm OS
@@ -188,6 +193,16 @@ the same typed DiskDevice context API and RS-232 FujiBus session behavior.
 The `amiga-driver` target is intentionally available explicitly but is not
 part of the top-level `make` all-target loop; ordinary users do not need the
 resident archive unless they are building an Exec device.
+
+## Palm OS variant
+
+`make palmos-springboard` builds the Handspring Visor library with prc-tools.
+Like `amiga-driver` it is in `EXTRA_TARGETS`: `make check` builds it, but the
+default `make` loop does not, because it needs prc-tools and `sbnio.h` from
+`fujinet-nio`. Pass `SBNIO_ABI_INCLUDE=-I<dir>` if `../fujinet-nio` is not
+where the header lives. Applications also add `-Iinclude/palmos` for the
+`stdint.h` and `string.h` that prc-tools lacks. See
+[Palm OS Springboard](palmos/springboard.md).
 
 ## Linux Native Testing
 
@@ -244,7 +259,8 @@ Platform-specific transport code is located in:
 - `src/platform/msdos/` - MS-DOS serial, IOCTL, and F5 backends
 - `src/platform/linux/` - Linux/POSIX serial or PTY byte channel
 - `src/platform/amiga/` - Amiga `fujinet-nio.device` broker client
-- `src/platform/palmos/` - Palm OS cradle serial port (New Serial Manager, or the serial library before Palm OS 3.3)
+- `src/platform/palmos/` - Palm OS: the cradle serial port (New Serial Manager, or the serial library before Palm OS 3.3) and the Springboard CS1 link client
+- `include/palmos/` - `stdint.h` and `string.h` for prc-tools
 
 See [Transport Backends](transport-backends.md) for how library build targets map
 to `fujinet-nio` transports/channels, and how future MS-DOS parallel or BBC
