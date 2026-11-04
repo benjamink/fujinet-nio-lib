@@ -301,3 +301,8 @@ test-bbc-api-link: bbc bbc-clib
 	python3 tests/run_bbc_api_link_test.py
 
 test: test-bbc-api-link
+
+.PHONY: test-bbc-ready
+test-bbc-ready:
+	bash tests/run_bbc_ready_test.sh
+test: test-bbc-ready

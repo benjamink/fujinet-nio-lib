@@ -13,7 +13,7 @@ Other public headers (raw/session/legacy/Atari stream) are outside this inventor
 
 ## available
 
-`fn_file_list_pages`, `fn_appstore_delete`, `fn_appstore_list`, `fn_appstore_list_next_key`, `fn_appstore_read`, `fn_appstore_stat`, `fn_appstore_write`, `fn_clock_get`, `fn_clock_get_format`, `fn_clock_get_timezone`, `fn_clock_get_tz`, `fn_clock_set`, `fn_clock_set_timezone`, `fn_clock_set_timezone_save`, `fn_clock_sync_network_time`, `fn_close`, `fn_error_string`, `fn_format_mount_display`, `fn_fuji_get_hsio`, `fn_fuji_get_info`, `fn_fuji_set_hsio`, `fn_info`, `fn_init`, `fn_is_ready`, `fn_json_query`, `fn_open`, `fn_open_long`, `fn_open_translated`, `fn_read`, `fn_resolve_mount_target`, `fn_set_body_length`, `fn_set_content_profile`, `fn_slot_catalog_delete`, `fn_slot_catalog_get`, `fn_slot_catalog_next_entry`, `fn_slot_catalog_put`, `fn_slot_catalog_range`, `fn_tcp_open`, `fn_version`, `fn_wifi_get_adapter_info`, `fn_wifi_get_config`, `fn_wifi_get_join_status`, `fn_wifi_get_status`, `fn_wifi_scan`, `fn_wifi_set_config`, `fn_wifi_try_join`, `fn_write`.
+`fn_read_available`, `fn_ready`, `fn_file_list_pages`, `fn_appstore_delete`, `fn_appstore_list`, `fn_appstore_list_next_key`, `fn_appstore_read`, `fn_appstore_stat`, `fn_appstore_write`, `fn_clock_get`, `fn_clock_get_format`, `fn_clock_get_timezone`, `fn_clock_get_tz`, `fn_clock_set`, `fn_clock_set_timezone`, `fn_clock_set_timezone_save`, `fn_clock_sync_network_time`, `fn_close`, `fn_error_string`, `fn_format_mount_display`, `fn_fuji_get_hsio`, `fn_fuji_get_info`, `fn_fuji_set_hsio`, `fn_info`, `fn_init`, `fn_is_ready`, `fn_json_query`, `fn_open`, `fn_open_long`, `fn_open_translated`, `fn_read`, `fn_resolve_mount_target`, `fn_set_body_length`, `fn_set_content_profile`, `fn_slot_catalog_delete`, `fn_slot_catalog_get`, `fn_slot_catalog_next_entry`, `fn_slot_catalog_put`, `fn_slot_catalog_range`, `fn_tcp_open`, `fn_version`, `fn_wifi_get_adapter_info`, `fn_wifi_get_config`, `fn_wifi_get_join_status`, `fn_wifi_get_status`, `fn_wifi_scan`, `fn_wifi_set_config`, `fn_wifi_try_join`, `fn_write`.
 
 ## unsupported-stub
 
@@ -21,7 +21,7 @@ Other public headers (raw/session/legacy/Atari stream) are outside this inventor
 
 ## missing
 
-`fn_disk_clear_changed`, `fn_disk_clear_changed_context`, `fn_disk_context_init`, `fn_disk_flush`, `fn_disk_flush_context`, `fn_disk_info`, `fn_disk_info_context`, `fn_disk_inspect_context`, `fn_disk_last_error`, `fn_disk_last_error_context`, `fn_disk_mount`, `fn_disk_mount_context`, `fn_disk_read_sector`, `fn_disk_read_sector_context`, `fn_disk_restore_boot`, `fn_disk_restore_boot_context`, `fn_disk_unmount`, `fn_disk_unmount_context`, `fn_disk_write_sector`, `fn_disk_write_sector_context`, `fn_read_available`, `fn_ready`, `fn_shutdown`, `fn_write_get_last_diagnostics`.
+`fn_disk_clear_changed`, `fn_disk_clear_changed_context`, `fn_disk_context_init`, `fn_disk_flush`, `fn_disk_flush_context`, `fn_disk_info`, `fn_disk_info_context`, `fn_disk_inspect_context`, `fn_disk_last_error`, `fn_disk_last_error_context`, `fn_disk_mount`, `fn_disk_mount_context`, `fn_disk_read_sector`, `fn_disk_read_sector_context`, `fn_disk_restore_boot`, `fn_disk_restore_boot_context`, `fn_disk_unmount`, `fn_disk_unmount_context`, `fn_disk_write_sector`, `fn_disk_write_sector_context`, `fn_shutdown`, `fn_write_get_last_diagnostics`.
 
 ## other-platform
 
@@ -92,3 +92,16 @@ The baseline directly calls the ROM BGET entry, omitting MOS and library loop
 costs. A 512-byte three-chunk transfer with two stub refills took 14722 cycles;
 this is not a measured network throughput figure. Both new- and old-ROM
 Beebium TCP/HTTP tests pass (five each), verifying fallback behavior.
+
+## Readiness
+
+BBC Ready combines one firmware Ready request with local OSWORD &78 reason &08
+metadata for active library sessions. It translates firmware handles to MOS
+handles and adds ROM-buffered bytes, saturating at 65535. Invalid/malformed
+replies fail; older ROMs return unsupported. Other ROM/BASIC sessions are not
+exposed as library sessions. Local channel queries cause no bus traffic.
+
+`fn_read_available()` returns the remaining ROM-buffered lower bound from the
+last bulk read, with FN_READ_AVAILABLE set when nonzero. It performs no bus
+request. Older-ROM fallback reports no availability hint. This does not promise
+that the firmware/network has no additional bytes when the hint is zero.

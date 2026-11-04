@@ -1,5 +1,5 @@
 .macpack longbranch
-        .export _fn_read
+        .export _fn_read, _fn_read_available
 
         .import __fn_initialized, __fn_sessions
         .import invalid_with_stack_fix
@@ -103,6 +103,7 @@ _fn_read:
         lda     #$00
         sta     tmp1
         sta     tmp2
+        sta     read_block+9
         ldy     #0
         sta     (ptr1),y
         iny
@@ -198,6 +199,12 @@ _fn_read:
         ldx     #$00
 
 @done:
+        lda read_block+9
+        beq :+
+        txa
+        ora #8
+        tax
+:
         ldy     #$00
         lda     tmp1
         sta     (ptr1),y
@@ -268,4 +275,9 @@ read_chunk:
         pla
         sta ptr1+1
         tya
+        rts
+
+_fn_read_available:
+        lda read_block+9
+        ldx #0
         rts

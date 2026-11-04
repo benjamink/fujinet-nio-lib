@@ -939,8 +939,9 @@ uint8_t fn_read(fn_handle_t handle,
                 uint8_t *flags);
 
 /**
- * @brief Bytes the firmware still held for the handle after the most recent fn_read().
+ * @brief Bytes already held for the handle after the most recent fn_read().
  *
+ * On BBC this is the ROM-buffered lower bound (0 on older ROMs), not a firmware queue snapshot.
  * Meaningful when that fn_read() returned FN_READ_AVAILABLE in its flags (the firmware reports it; older
  * firmware does not, and this returns 0). A lower bound: more may arrive. Saturates at 65535. A client
  * reading a length-prefixed or request/reply stream uses it to know whether the next fn_read() will find data
