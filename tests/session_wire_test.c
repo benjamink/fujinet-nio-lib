@@ -232,11 +232,85 @@ static int test_short_fujibus_is_io(void)
     return 0;
 }
 
+static int test_oversized_frame_is_io(void)
+{
+    fake_serial_t fake = {0};
+    fn_stream_session_t session;
+    uint8_t wire[128];
+    uint8_t response[48];
+    uint16_t response_length = 0;
+    uint8_t big[40];
+    const uint8_t request[] = {0x01, 0xFC, 0x00};
+    uint16_t i;
+
+    /* A whole, valid frame, but bigger than the caller's 16-byte buffer */
+    memset(big, 0x5A, sizeof(big));
+    mini_fuji(big, 0xFE, 0x02, sizeof(big));
+    fake.rx_length = fn_slip_encode(big, sizeof(big), fake.rx);
+    memset(response, 0xA5, sizeof(response));
+    if (fn_stream_session_init(&session, &fake_ops, &fake, wire, sizeof(wire)) !=
+            FN_OK ||
+        fn_stream_session_open(&session) != FN_OK)
+        return 1;
+    if (fn_stream_session_request(&session, request, sizeof(request), response,
+                                  16, &response_length, 100) != FN_ERR_IO)
+        return 1;
+    for (i = 16; i < sizeof(response); ++i)
+        if (response[i] != 0xA5)
+            return 1;
+    return 0;
+}
+
+static int test_frame_exactly_filling_the_buffer(void)
+{
+    fake_serial_t fake = {0};
+    fn_stream_session_t session;
+    uint8_t wire[128];
+    uint8_t response[24];
+    uint16_t response_length = 0;
+    uint8_t packet[16];
+    const uint8_t request[] = {0x01, 0xFC, 0x00};
+    uint16_t i;
+
+    /* END and ESC bytes in the body: each takes two on the wire but one
+     * decoded, and it is the decoded size that must fit */
+    memset(packet, 0x5A, sizeof(packet));
+    mini_fuji(packet, 0xFE, 0x02, sizeof(packet));
+    packet[8] = SLIP_END;
+    packet[9] = SLIP_ESCAPE;
+    fake.rx_length = fn_slip_encode(packet, sizeof(packet), fake.rx);
+    memset(response, 0xA5, sizeof(response));
+    if (fn_stream_session_init(&session, &fake_ops, &fake, wire, sizeof(wire)) !=
+            FN_OK ||
+        fn_stream_session_open(&session) != FN_OK)
+        return 1;
+    if (fn_stream_session_request(&session, request, sizeof(request), response,
+                                  sizeof(packet), &response_length, 100) != FN_OK ||
+        response_length != sizeof(packet) ||
+        memcmp(response, packet, sizeof(packet)) != 0 ||
+        response[sizeof(packet)] != 0xA5)
+        return 1;
+
+    /* One byte less room and the same frame is refused, the last byte of the
+     * full-size reply untouched */
+    fake.rx_offset = 0;
+    memset(response, 0xA5, sizeof(response));
+    if (fn_stream_session_request(&session, request, sizeof(request), response,
+                                  sizeof(packet) - 1, &response_length, 100) !=
+        FN_ERR_IO)
+        return 1;
+    for (i = sizeof(packet) - 1; i < sizeof(response); ++i)
+        if (response[i] != 0xA5)
+            return 1;
+    return 0;
+}
+
 int main(void)
 {
     if (test_rs232_slip_session() || test_bulk_write_slip_session() ||
         test_session_timeout_and_busy() || test_lost_opening_end() ||
-        test_short_fujibus_is_io()) {
+        test_short_fujibus_is_io() || test_oversized_frame_is_io() ||
+        test_frame_exactly_filling_the_buffer()) {
         puts("session wire tests failed");
         return 1;
     }

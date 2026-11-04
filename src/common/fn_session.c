@@ -200,11 +200,9 @@ uint8_t fn_stream_session_request(fn_stream_session_t *session,
             result = read_frame(session, timeout_ms, &raw_length);
             if (result == FN_OK) {
                 decoded_length = fn_slip_decode(session->wire_buffer, raw_length,
-                                                 response);
+                                                 response, response_capacity);
                 session->last_decoded_length = decoded_length;
                 if (!decoded_length) {
-                    result = FN_ERR_IO;
-                } else if (decoded_length > response_capacity) {
                     result = FN_ERR_IO;
                 } else if (!decoded_fujibus_ok(response, decoded_length)) {
                     /* Closed SLIP with a truncated/corrupt FujiBus body.

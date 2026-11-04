@@ -65,9 +65,11 @@ uint16_t fn_slip_encode(const uint8_t *input, uint16_t in_len, uint8_t *output)
  * @param input    Input SLIP-encoded data
  * @param in_len   Length of input data
  * @param output   Output buffer for decoded data
- * @return Length of decoded data, or 0 on error
+ * @param out_max  Size of the output buffer
+ * @return Length of decoded data, or 0 on error or if it would not fit
  */
-uint16_t fn_slip_decode(const uint8_t *input, uint16_t in_len, uint8_t *output)
+uint16_t fn_slip_decode(const uint8_t *input, uint16_t in_len, uint8_t *output,
+                        uint16_t out_max)
 {
     uint16_t out_len;
     uint16_t i;
@@ -89,7 +91,12 @@ uint16_t fn_slip_decode(const uint8_t *input, uint16_t in_len, uint8_t *output)
             /* End of packet */
             break;
         }
-        
+
+        /* A frame bigger than the caller's buffer is refused, not truncated */
+        if (out_len >= out_max) {
+            return 0;
+        }
+
         if (b == SLIP_ESCAPE) {
             /* Escaped byte */
             if (i >= in_len) {

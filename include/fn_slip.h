@@ -22,9 +22,10 @@ extern "C" {
 uint16_t fn_slip_encode(const uint8_t *input, uint16_t in_len, uint8_t *output);
 
 /**
- * Decode SLIP-framed data.
+ * Decode SLIP-framed data into at most out_max bytes; 0 if it does not fit.
  */
-uint16_t fn_slip_decode(const uint8_t *input, uint16_t in_len, uint8_t *output);
+uint16_t fn_slip_decode(const uint8_t *input, uint16_t in_len, uint8_t *output,
+                        uint16_t out_max);
 
 #ifdef __cplusplus
 }
