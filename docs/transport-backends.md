@@ -51,6 +51,7 @@ driver ABI.
 | `msdos-f5` | INT F5 backend | Sends raw NIO calls through the NIO build of `FUJINET.SYS`; the driver owns COM1. |
 | `bbc`, `bbc-clib` | `fn-rom`/MOS channels | Does not use the common direct transport stack. BBC delegates transport details to `fn-rom`. |
 | `atari` | SIO | Direct target-specific transport. |
+| `palmos-serial` | common stream transport over the Palm OS cradle serial port | New Serial Manager at 115200 baud, or the serial library before Palm OS 3.3. Reclaims the line after an idle spell (`FN_STREAM_WAKE_IDLE_MS`) because NIO may lend it to HotSync. |
 
 ## Atari SIO Backend Notes
 

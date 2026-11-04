@@ -26,6 +26,12 @@ uint8_t fn_channel_read_byte(uint8_t *value, uint16_t timeout_ms);
 void fn_channel_drain_rx(void);
 void fn_channel_close(void);
 
+#ifdef FN_STREAM_WAKE_IDLE_MS
+/* Milliseconds from any fixed point; may wrap. Only targets that reclaim the
+ * line after an idle spell need it (fn_transport_stream.c). */
+uint32_t fn_channel_now_ms(void);
+#endif
+
 #ifdef __cplusplus
 }
 #endif

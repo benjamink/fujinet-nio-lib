@@ -19,6 +19,7 @@ PLATFORM_msdos-f5 := msdos
 PLATFORM_linux      := linux
 PLATFORM_amiga      := amiga
 PLATFORM_amiga-driver := amiga
+PLATFORM_palmos-serial := palmos
 
 # Get platform for current target
 PLATFORM := $(PLATFORM_$(TARGET))
@@ -40,6 +41,7 @@ COMPILER_FAMILY_msdos-f5 := wcc
 COMPILER_FAMILY_linux      := gcc
 COMPILER_FAMILY_amiga      := amigagcc
 COMPILER_FAMILY_amiga-driver := amigagcc
+COMPILER_FAMILY_palmos-serial := prcgcc
 
 # Get compiler family for current target
 COMPILER_FAMILY := $(COMPILER_FAMILY_$(TARGET))
@@ -50,6 +52,7 @@ COMPILER_FAMILY := $(COMPILER_FAMILY_$(TARGET))
 TRANSPORT_FAMILY_msdos     := stream
 TRANSPORT_FAMILY_msdos-serial := stream
 TRANSPORT_FAMILY_linux      := stream
+TRANSPORT_FAMILY_palmos-serial := stream
 
 # Get transport family for current target
 TRANSPORT_FAMILY := $(TRANSPORT_FAMILY_$(TARGET))
@@ -119,6 +122,14 @@ TARGET_ASFLAGS_amiga    :=
 # They own transport shutdown as part of their device lifecycle instead.
 TARGET_CFLAGS_amiga-driver := -mcpu=68000 -msoft-float -DFN_AMIGA_EXPLICIT_LIFECYCLE $(AMIGA_NIO_DEVICE_INCLUDE)
 TARGET_ASFLAGS_amiga-driver :=
+
+# Palm OS over the cradle serial port (prc-tools). NIO may lend an idle cradle
+# line to HotSync between requests, so the stream transport reclaims it after
+# an idle spell (see fn_transport_stream.c). Packets stay small: the dynamic
+# heap is tight.
+TARGET_CFLAGS_palmos-serial  := -Iinclude/palmos -DFN_MAX_PACKET_SIZE=512 -DFN_STREAM_WAKE_IDLE_MS=30000
+TARGET_ASFLAGS_palmos-serial :=
+TARGET_PLATFORM_SRCS_palmos-serial := src/platform/palmos/fn_channel_serial.c
 
 # Get flags for current target
 TARGET_CFLAGS  := $(TARGET_CFLAGS_$(TARGET))

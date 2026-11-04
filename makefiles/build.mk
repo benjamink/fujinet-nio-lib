@@ -32,8 +32,8 @@ endif
 # Platform-specific source directory
 PLATFORM_DIR := $(SRCDIR)/platform/$(PLATFORM)
 
-# Library extension (GCC/amigagcc use .a, CC65 uses .lib)
-ifneq (,$(filter $(COMPILER_FAMILY),gcc amigagcc))
+# Library extension (GCC/amigagcc/prcgcc use .a, CC65 uses .lib)
+ifneq (,$(filter $(COMPILER_FAMILY),gcc amigagcc prcgcc))
     LIBEXT := .a
 else
     LIBEXT := .lib
@@ -282,6 +282,23 @@ $(OBJDIR)/$(TARGET)/legacy/%.o: $(SRCDIR)/legacy/%.c | $(OBJDIR)/$(TARGET)/legac
 $(OBJDIR)/$(TARGET)/platform/$(PLATFORM)/%.o: $(SRCDIR)/platform/$(PLATFORM)/%.c | $(OBJDIR)/$(TARGET)/platform/$(PLATFORM)
 	@echo "  CC $<"
 	$(CC) -c $(CFLAGS) -MMD -MF $(@:.o=.d) -o $@ $<
+else ifeq ($(COMPILER_FAMILY),prcgcc)
+# prc-tools gcc 2.95 has no -MF: -MMD drops <source>.d in the working directory
+# with the bare object name as target, so move it beside the object and fix it.
+$(OBJDIR)/$(TARGET)/common/%.o: $(SRCDIR)/common/%.c | $(OBJDIR)/$(TARGET)/common
+	@echo "  CC $<"
+	$(CC) -c $(CFLAGS) -MMD -o $@ $<
+	@sed 's|^[^:]*:|$@:|' $(notdir $(<:.c=.d)) > $(@:.o=.d) && rm -f $(notdir $(<:.c=.d))
+
+$(OBJDIR)/$(TARGET)/legacy/%.o: $(SRCDIR)/legacy/%.c | $(OBJDIR)/$(TARGET)/legacy
+	@echo "  CC $<"
+	$(CC) -c $(CFLAGS) -MMD -o $@ $<
+	@sed 's|^[^:]*:|$@:|' $(notdir $(<:.c=.d)) > $(@:.o=.d) && rm -f $(notdir $(<:.c=.d))
+
+$(OBJDIR)/$(TARGET)/platform/$(PLATFORM)/%.o: $(SRCDIR)/platform/$(PLATFORM)/%.c | $(OBJDIR)/$(TARGET)/platform/$(PLATFORM)
+	@echo "  CC $<"
+	$(CC) -c $(CFLAGS) -MMD -o $@ $<
+	@sed 's|^[^:]*:|$@:|' $(notdir $(<:.c=.d)) > $(@:.o=.d) && rm -f $(notdir $(<:.c=.d))
 else ifeq ($(COMPILER_FAMILY),wcc)
 # Open Watcom compilation
 $(OBJDIR)/$(TARGET)/common/%.o: $(SRCDIR)/common/%.c | $(OBJDIR)/$(TARGET)/common
@@ -311,7 +328,7 @@ $(OBJDIR)/$(TARGET)/platform/$(PLATFORM)/%.o: $(SRCDIR)/platform/$(PLATFORM)/%.c
 endif
 
 # Create library
-ifneq (,$(filter $(COMPILER_FAMILY),gcc amigagcc))
+ifneq (,$(filter $(COMPILER_FAMILY),gcc amigagcc prcgcc))
 $(LIBRARY): $(OBJECTS) | $(BUILDDIR)
 	@echo "  AR $@"
 	$(AR) rcs $@ $(OBJECTS)

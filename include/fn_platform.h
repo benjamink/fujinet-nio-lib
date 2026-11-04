@@ -143,6 +143,12 @@ const char *fn_platform_name(void);
     #define FN_PLATFORM_NAME     "amiga"
 #endif
 
+/* Palm OS targets (prc-tools m68k-palmos-gcc defines __palmos__) */
+#ifdef __palmos__
+    #define FN_PLATFORM_PALMOS   1
+    #define FN_PLATFORM_NAME     "palmos"
+#endif
+
 /* Default if not detected */
 #ifndef FN_PLATFORM_NAME
     #define FN_PLATFORM_NAME     "unknown"

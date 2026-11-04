@@ -14,7 +14,7 @@
 # Supported targets
 # TARGETS = atari apple2 apple2enh bbc c64 coco msdos linux
 TARGETS = atari bbc bbc-clib msdos-serial msdos-ioctl msdos-f5 linux amiga
-EXTRA_TARGETS = amiga-driver
+EXTRA_TARGETS = amiga-driver palmos-serial
 
 # Output library name
 override PROGRAM := fujinet-nio
@@ -22,7 +22,7 @@ override PROGRAM := fujinet-nio
 # Phony targets
 .PHONY: all clean help disk-bbc disk-bbc-clib test-legacy test-mount-resolve \
 	test-appstore-read test-list-pages test-slot-catalog test-bbc test-bbc-scripted \
-	test-bbc-real test-fuji test-wifi test-disk test-disk-context test-session test-open-ext test-open-wire test-ready-wire test-write-partial test-library-link \
+	test-bbc-real test-fuji test-wifi test-disk test-disk-context test-session test-stream-wake test-open-ext test-open-wire test-ready-wire test-write-partial test-library-link \
 	test-amiga-transport test-atari-transport test-atari-hsio test-atari-proc test-atari-read-profile test-atari-list-pages test-atari-appkey-uri test-atari-parse-read test-atari-client-buffers test-atari-network-read test-atari-network-write test-atari-network-open test-atari-compact test-raw-transport-retry test \
 	test-all-build check msdos $(TARGETS) $(EXTRA_TARGETS)
 
@@ -169,6 +169,10 @@ test-session:
 	@echo "Running channel/session wire tests..."
 	bash ./tests/run_session_wire_test.sh
 
+test-stream-wake:
+	@echo "Running stream transport idle-reclaim tests..."
+	bash ./tests/run_stream_wake_test.sh
+
 test-open-ext:
 	@echo "Running Open-extension wire test..."
 	bash ./tests/run_open_ext_wire_test.sh
@@ -233,7 +237,7 @@ test-release:
 
 test: test-fuji-hsio test-package-atari test-release
 
-test: test-u1mb-clear test-library-link test-legacy test-mount-resolve test-appstore-read test-list-pages test-atari-list-pages test-atari-appkey-uri test-atari-parse-read test-atari-client-buffers test-atari-network-read test-atari-network-write test-atari-network-open test-slot-catalog test-fuji test-wifi test-disk test-disk-context test-session test-open-ext test-open-wire test-ready-wire test-large-read test-write-partial test-amiga-transport test-atari-transport test-atari-hsio test-atari-proc test-atari-read-profile test-atari-compact test-raw-transport-retry
+test: test-u1mb-clear test-library-link test-legacy test-mount-resolve test-appstore-read test-list-pages test-atari-list-pages test-atari-appkey-uri test-atari-parse-read test-atari-client-buffers test-atari-network-read test-atari-network-write test-atari-network-open test-slot-catalog test-fuji test-wifi test-disk test-disk-context test-session test-stream-wake test-open-ext test-open-wire test-ready-wire test-large-read test-write-partial test-amiga-transport test-atari-transport test-atari-hsio test-atari-proc test-atari-read-profile test-atari-compact test-raw-transport-retry
 
 # Fast required change check: compile every configured target, then run the
 # host-side tests and public archive-link test. Keep this as a recipe rather
@@ -266,6 +270,7 @@ help:
 	@echo "  make test-session - Run channel/session wire tests"
 	@echo "  make test-library-link - Build Linux library and link a public API consumer"
 	@echo "  make test-amiga-transport - Run Amiga broker-client host tests"
+	@echo "  make test-stream-wake - Run stream transport idle-reclaim tests"
 	@echo "  make test-all-build - Build all configured library targets"
 	@echo "  make check - Build all targets and run the fast host-side test suite"
 	@echo "  make test - Run all host-side wire tests"
@@ -281,6 +286,7 @@ help:
 	@echo "  msdos-ioctl  - MS-DOS FUJINET.SYS IOCTL backend (Open Watcom)"
 	@echo "  msdos-f5     - MS-DOS FUJINET.SYS INT F5 backend (Open Watcom)"
 	@echo "  linux       - Linux/Posix (gcc)"
+	@echo "  palmos-serial - Palm OS 3.1+ over the cradle serial port (prc-tools)"
 	@echo ""
 	@echo "Environment:"
 	@echo "  CC65_HOME   - cc65 checkout root (required for bbc/bbc-clib)"

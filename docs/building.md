@@ -33,6 +33,17 @@ This document describes how to build the fujinet-nio-lib library for various pla
   export PATH=/opt/amiga/bin:$PATH
   ```
 
+### For Palm OS builds:
+- [prc-tools-remix](https://github.com/jichu4n/prc-tools-remix)
+  (`m68k-palmos-gcc` 2.95.3, `m68k-palmos-ar`) and the Palm OS 3.5 SDK.
+  Its `tools/setup-palm-os-dev-env.sh` installs both on Debian; the Docker
+  image in [mozzwald/fujinet-palm](https://github.com/mozzwald/fujinet-palm)
+  (`docker/`) has them ready:
+
+  ```bash
+  ../fujinet-palm/docker/palm-build.sh make palmos-serial
+  ```
+
 ## Building
 
 ### Build all targets:
@@ -52,6 +63,7 @@ make msdos-f5     # MS-DOS FUJINET.SYS INT F5 backend
 make linux      # Native Linux (for testing)
 make amiga      # Amiga application archive
 make amiga-driver # Resident-driver archive (no application atexit cleanup)
+make palmos-serial # Palm OS 3.1+ cradle serial port
 ```
 
 ### Clean build artifacts:
@@ -141,7 +153,27 @@ fujinet-nio-lib/
     fujinet-nio-msdos-f5.lib     # MS-DOS FUJINET.SYS INT F5 backend
     fujinet-nio-amiga.a          # Amiga application library
     fujinet-nio-amiga-driver.a   # Amiga resident-driver library
+    fujinet-nio-palmos-serial.a  # Palm OS cradle serial library
 ```
+
+## Palm OS
+
+`make palmos-serial` builds for Palm OS 3.1 and later. It opens the cradle
+serial port with the New Serial Manager on Palm OS 3.3 and later, and with the
+older serial library before that (3.1, 3.2), and talks FujiBus on it at 115200
+baud through the common stream transport
+(`src/platform/palmos/fn_channel_serial.c`). Like `amiga-driver`, it is
+outside the top-level `make` loop but built by `make check`.
+
+- gcc 2.95 has no `<stdint.h>` or `<string.h>`; `include/palmos/` supplies
+  both. Apps add `-Iinclude/palmos` from this tree to their include path, and
+  `-DFN_MAX_PACKET_SIZE=512` to match the library.
+- `int` is 16 bits, as on cc65.
+- FujiNet NIO can lend the cradle line to HotSync while the bus is idle
+  (`docs/hotsync.md` in fujinet-nio, "Cradle"). The target sets
+  `FN_STREAM_WAKE_IDLE_MS`, so the first request after 30 s of quiet is
+  preceded by FujiDevice GetInfo, retried briefly until FujiNet answers.
+  Requests themselves are still sent once.
 
 ## Amiga variants
 
@@ -212,6 +244,7 @@ Platform-specific transport code is located in:
 - `src/platform/msdos/` - MS-DOS serial, IOCTL, and F5 backends
 - `src/platform/linux/` - Linux/POSIX serial or PTY byte channel
 - `src/platform/amiga/` - Amiga `fujinet-nio.device` broker client
+- `src/platform/palmos/` - Palm OS cradle serial port (New Serial Manager, or the serial library before Palm OS 3.3)
 
 See [Transport Backends](transport-backends.md) for how library build targets map
 to `fujinet-nio` transports/channels, and how future MS-DOS parallel or BBC
