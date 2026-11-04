@@ -13,7 +13,7 @@ Other public headers (raw/session/legacy/Atari stream) are outside this inventor
 
 ## available
 
-`fn_appstore_delete`, `fn_appstore_list`, `fn_appstore_list_next_key`, `fn_appstore_read`, `fn_appstore_stat`, `fn_appstore_write`, `fn_clock_get`, `fn_clock_get_format`, `fn_clock_get_timezone`, `fn_clock_get_tz`, `fn_clock_set`, `fn_clock_set_timezone`, `fn_clock_set_timezone_save`, `fn_clock_sync_network_time`, `fn_close`, `fn_error_string`, `fn_format_mount_display`, `fn_fuji_get_hsio`, `fn_fuji_get_info`, `fn_fuji_set_hsio`, `fn_info`, `fn_init`, `fn_is_ready`, `fn_json_query`, `fn_open`, `fn_open_long`, `fn_open_translated`, `fn_read`, `fn_resolve_mount_target`, `fn_set_body_length`, `fn_set_content_profile`, `fn_slot_catalog_delete`, `fn_slot_catalog_get`, `fn_slot_catalog_next_entry`, `fn_slot_catalog_put`, `fn_slot_catalog_range`, `fn_tcp_open`, `fn_version`, `fn_wifi_get_adapter_info`, `fn_wifi_get_config`, `fn_wifi_get_join_status`, `fn_wifi_get_status`, `fn_wifi_scan`, `fn_wifi_set_config`, `fn_wifi_try_join`, `fn_write`.
+`fn_file_list_pages`, `fn_appstore_delete`, `fn_appstore_list`, `fn_appstore_list_next_key`, `fn_appstore_read`, `fn_appstore_stat`, `fn_appstore_write`, `fn_clock_get`, `fn_clock_get_format`, `fn_clock_get_timezone`, `fn_clock_get_tz`, `fn_clock_set`, `fn_clock_set_timezone`, `fn_clock_set_timezone_save`, `fn_clock_sync_network_time`, `fn_close`, `fn_error_string`, `fn_format_mount_display`, `fn_fuji_get_hsio`, `fn_fuji_get_info`, `fn_fuji_set_hsio`, `fn_info`, `fn_init`, `fn_is_ready`, `fn_json_query`, `fn_open`, `fn_open_long`, `fn_open_translated`, `fn_read`, `fn_resolve_mount_target`, `fn_set_body_length`, `fn_set_content_profile`, `fn_slot_catalog_delete`, `fn_slot_catalog_get`, `fn_slot_catalog_next_entry`, `fn_slot_catalog_put`, `fn_slot_catalog_range`, `fn_tcp_open`, `fn_version`, `fn_wifi_get_adapter_info`, `fn_wifi_get_config`, `fn_wifi_get_join_status`, `fn_wifi_get_status`, `fn_wifi_scan`, `fn_wifi_set_config`, `fn_wifi_try_join`, `fn_write`.
 
 ## unsupported-stub
 
@@ -21,7 +21,7 @@ Other public headers (raw/session/legacy/Atari stream) are outside this inventor
 
 ## missing
 
-`fn_disk_clear_changed`, `fn_disk_clear_changed_context`, `fn_disk_context_init`, `fn_disk_flush`, `fn_disk_flush_context`, `fn_disk_info`, `fn_disk_info_context`, `fn_disk_inspect_context`, `fn_disk_last_error`, `fn_disk_last_error_context`, `fn_disk_mount`, `fn_disk_mount_context`, `fn_disk_read_sector`, `fn_disk_read_sector_context`, `fn_disk_restore_boot`, `fn_disk_restore_boot_context`, `fn_disk_unmount`, `fn_disk_unmount_context`, `fn_disk_write_sector`, `fn_disk_write_sector_context`, `fn_file_list_pages`, `fn_read_available`, `fn_ready`, `fn_shutdown`, `fn_write_get_last_diagnostics`.
+`fn_disk_clear_changed`, `fn_disk_clear_changed_context`, `fn_disk_context_init`, `fn_disk_flush`, `fn_disk_flush_context`, `fn_disk_info`, `fn_disk_info_context`, `fn_disk_inspect_context`, `fn_disk_last_error`, `fn_disk_last_error_context`, `fn_disk_mount`, `fn_disk_mount_context`, `fn_disk_read_sector`, `fn_disk_read_sector_context`, `fn_disk_restore_boot`, `fn_disk_restore_boot_context`, `fn_disk_unmount`, `fn_disk_unmount_context`, `fn_disk_write_sector`, `fn_disk_write_sector_context`, `fn_read_available`, `fn_ready`, `fn_shutdown`, `fn_write_get_last_diagnostics`.
 
 ## other-platform
 
@@ -44,3 +44,13 @@ Do not claim percentage savings until measured. Resident ROM space is limited;
 new OSWORD reasons must retain old callers and fail safely on older ROMs.
 Use soft65c02 for independent ABI/boundary/cycle vectors and Beebium for actual
 MOS integration. General library changes also require complete `make check`.
+
+## ListPages
+
+BBC now uses the shared ListPages codec through the ROM's existing OSWORD &78
+reason &06. The caller supplies the request/reply buffer; the adapter adds no
+persistent packet buffer and requires no resident ROM changes. Filtering,
+directory inclusion and filtered totals remain firmware responsibilities.
+The BBC Beebium test verifies two filtered pages, exact request bytes and a
+short malformed reply. Shared independent host wire vectors also run through
+the BBC raw-call adapter.

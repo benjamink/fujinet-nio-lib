@@ -13,9 +13,15 @@ static uint8_t reply_status;
 static uint16_t reply_len;
 static uint8_t reply[64];
 
+#ifdef TEST_BBC_RAW
+uint8_t fn_bbc_device_call_raw(uint8_t device, uint8_t command, const uint8_t *payload,
+                    uint16_t payload_length, uint8_t *out, uint16_t out_capacity,
+                    uint8_t *status, uint16_t *length)
+#else
 uint8_t fn_raw_call(uint8_t device, uint8_t command, const void *payload,
                     uint16_t payload_length, void *out, uint16_t out_capacity,
                     fn_raw_response_t *response)
+#endif
 {
     last_device = device;
     last_command = command;
@@ -25,8 +31,13 @@ uint8_t fn_raw_call(uint8_t device, uint8_t command, const void *payload,
         return FN_ERR_INVALID;
     }
     memcpy(out, reply, reply_len);
+#ifdef TEST_BBC_RAW
+    *status = reply_status;
+    *length = reply_len;
+#else
     response->status = reply_status;
     response->payload_length = reply_len;
+#endif
     return FN_OK;
 }
 

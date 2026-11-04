@@ -56,7 +56,7 @@
   "fn_disk_write_sector": "missing",
   "fn_disk_write_sector_context": "missing",
   "fn_error_string": "available",
-  "fn_file_list_pages": "missing",
+  "fn_file_list_pages": "available",
   "fn_format_mount_display": "available",
   "fn_fuji_get_hsio": "available",
   "fn_fuji_get_info": "available",

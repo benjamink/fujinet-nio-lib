@@ -135,7 +135,8 @@ LEGACY_SRCS_DEFAULT := $(SRCDIR)/legacy/fn_legacy_appkey_state.c \
                        $(SRCDIR)/legacy/fn_legacy_appkey_read_buffered.c \
                        $(SRCDIR)/legacy/fn_legacy_appkey_write.c
 
-COMMON_SRCS_BBC := $(SRCDIR)/common/fn_util.c \
+COMMON_SRCS_BBC := $(SRCDIR)/common/fn_file_list_pages.c \
+                   $(SRCDIR)/common/fn_util.c \
                    $(SRCDIR)/common/fn_ext.c \
                    $(SRCDIR)/common/fn_clock_time_common.c \
                    $(SRCDIR)/common/fn_clock_get.c \
