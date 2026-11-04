@@ -74,7 +74,7 @@ pointer to the ROM bridge, which requires a valid output pointer.
 
 New ROMs copy the current buffered chunk directly into caller memory. The
 library loops for larger reads, preserving the no-probe/NotReady boundary;
-old ROMs fall back to the original OSBGET loop. Count and flags are initialized
+The current ROM (reasons &07–&09) is required; there is no older-ROM fallback. Count and flags are initialized
 so NotReady cannot leave stale output values. The library adds an 11-byte
 control block; the ROM adds 212 bytes and no persistent workspace (BBC ROM
 free space 958 -> 746 bytes at this stage).
@@ -90,20 +90,19 @@ soft65c02 cycle measurements use preloaded buffers, excluding network time:
 
 The baseline directly calls the ROM BGET entry, omitting MOS and library loop
 costs. A 512-byte three-chunk transfer with two stub refills took 14722 cycles;
-this is not a measured network throughput figure. Both new- and old-ROM
-Beebium TCP/HTTP tests pass (five each), verifying fallback behavior.
+this is not a measured network throughput figure. Beebium TCP/HTTP tests verify the current ROM path.
 
 ## Readiness
 
 BBC Ready combines one firmware Ready request with local OSWORD &78 reason &08
 metadata for active library sessions. It translates firmware handles to MOS
 handles and adds ROM-buffered bytes, saturating at 65535. Invalid/malformed
-replies fail; older ROMs return unsupported. Other ROM/BASIC sessions are not
+replies fail; no separate ROM compatibility probe is performed. Other ROM/BASIC sessions are not
 exposed as library sessions. Local channel queries cause no bus traffic.
 
 `fn_read_available()` returns the remaining ROM-buffered lower bound from the
 last bulk read, with FN_READ_AVAILABLE set when nonzero. It performs no bus
-request. Older-ROM fallback reports no availability hint. This does not promise
+request. This does not promise
 that the firmware/network has no additional bytes when the hint is zero.
 
 ## HTTP request headers
@@ -156,3 +155,13 @@ Ready uses bounded temporary stack storage (85-byte reply plus 16-byte local
 control block), rather than a persistent buffer. Header construction uses
 caller storage or the existing short-open buffer. Further resident additions
 must account for the small remaining ROM margin.
+
+## Current-ROM requirement
+
+The old byte-at-a-time read fallback and Ready compatibility preflight have
+been removed. Independent BBC archive-link probes shrink from 740 to 661 CODE
+bytes for `fn_read`, and 2284 to 2167 for `fn_ready`; no BSS change. Ready now
+queries local metadata once per returned session rather than probing twice.
+These figures are separate probes, not additive whole-application savings.
+Deploy the library and current fn-rom together. Error handling remains, but
+there is no alternate implementation for older ROMs.

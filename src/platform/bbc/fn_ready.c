@@ -9,11 +9,6 @@ uint8_t fn_ready(fn_ready_entry_t *entries, uint8_t max_entries, uint8_t *count)
     fn_raw_response_t response;
     if (!_fn_initialized || !count || (!entries && max_entries)) return FN_ERR_INVALID;
     *count=0;
-    /* Probe local ABI first, so an old ROM fails without sending a bus request. */
-    for (i=0;i<FN_MAX_SESSIONS;++i) if (_fn_sessions[i].active) {
-        memset(block,0,sizeof(block)); block[0]=8; block[2]=(uint8_t)_fn_sessions[i].handle;
-        if (fn_bbc_osword78(block)!=0) return FN_ERR_UNSUPPORTED;
-    }
     result=fn_raw_call(0xFD,8,&request,1,reply,sizeof(reply),&response);
     if (result!=FN_OK) return result;
     if (response.status) return response.status<=8 ? response.status : FN_ERR_UNKNOWN;

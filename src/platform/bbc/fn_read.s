@@ -4,7 +4,7 @@
         .import __fn_initialized, __fn_sessions
         .import invalid_with_stack_fix
         .import _fn_bbc_osword78
-        .import _fn_bbc_rw_setup_read, _fn_bbc_osbget, addysp, return0
+        .import _fn_bbc_rw_setup_read, addysp, return0
         .importzp c_sp, ptr1, ptr2, ptr3, ptr4, tmp1, tmp2, tmp3, tmp4
 
         .include "fn_protocol.inc"
@@ -123,8 +123,6 @@ _fn_read:
         jcs     @done_full
 
         jsr     read_chunk
-        cmp     #1              ; old ROM: unsupported reason, retain OSBGET
-        jeq     @legacy_loop
         cmp     #0
         jne     @io_error
         lda     read_block+7
@@ -152,30 +150,6 @@ _fn_read:
         ldx     #0
         lda     #FN_ERR_IO
         rts
-
-@legacy_loop:
-        lda     tmp1
-        cmp     ptr4
-        lda     tmp2
-        sbc     ptr4+1
-        jcs     @done_full
-        lda     tmp3
-        jsr     _fn_bbc_osbget
-        cpx     #FN_BBC_OSBGET_NOT_READY
-        jeq     @not_ready
-        cpx     #$FF
-        jeq     @eof
-
-@store_byte:
-        ldy     #$00
-        sta     (ptr2),y
-        inc     ptr2
-        jne     @count
-        inc     ptr2+1
-@count: inc     tmp1
-        jne     @legacy_loop
-        inc     tmp2
-        jne     @legacy_loop
 
 @not_ready:
         lda     tmp1
