@@ -163,8 +163,6 @@ COMMON_SRCS_BBC := $(SRCDIR)/common/fn_file_list_pages.c \
                    $(SRCDIR)/common/fn_mount_resolve_build.c \
                    $(SRCDIR)/common/fn_resolve_mount_target.c \
                     $(SRCDIR)/common/fn_format_mount_display.c
-COMMON_SRCS_BBC += $(SRCDIR)/platform/bbc/fn_wifi.c $(SRCDIR)/platform/bbc/fn_wifi_adapter.c \
-                   $(SRCDIR)/platform/bbc/fn_fuji_info.c
 COMMON_SRCS_BBC += $(SRCDIR)/common/fn_fuji_hsio_get.c $(SRCDIR)/common/fn_fuji_hsio_set.c $(SRCDIR)/platform/bbc/fn_fuji_hsio_call.c
 
 # BBC fn_appstore_read/write are supplied by platform/bbc assembly sources.

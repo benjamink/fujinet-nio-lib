@@ -13,3 +13,10 @@ gcc -std=c99 -Wall -Wextra -Werror \
     "$ROOT/src/common/fn_wifi_adapter.c" \
     -o "$OUT"
 "$OUT"
+
+# The same vectors exercise the BBC implementation through its ROM-call seam.
+gcc -std=c99 -Wall -Wextra -Werror -D__fastcall__= \
+    -I"$ROOT/include" "$ROOT/tests/wifi_wire_test.c" \
+    "$ROOT/tests/bbc_wifi_wire_adapter.c" "$ROOT"/src/platform/bbc/fn_wifi*.c \
+    -o "${OUT}_bbc"
+"${OUT}_bbc"

@@ -54,3 +54,18 @@ directory inclusion and filtered totals remain firmware responsibilities.
 The BBC Beebium test verifies two filtered pages, exact request bytes and a
 short malformed reply. Shared independent host wire vectors also run through
 the BBC raw-call adapter.
+
+## Wi-Fi archive granularity
+
+Measured with the independent single-symbol BBC link probes (same cc65, includes
+transitive runtime helpers; these are not whole application sizes):
+
+| Probe | CODE before | CODE after | BSS before/after |
+|---|---:|---:|---:|
+| `fn_wifi_get_status` | 5421 | 2514 | 19 / 19 |
+| `fn_wifi_try_join` | 5421 | 1969 | 19 / 19 |
+
+Each public Wi-Fi operation is now a separate archive member. Shared host wire
+vectors run against the BBC implementation as well as the general implementation.
+This also caught and fixed configuration writes passing a null reply-length
+pointer to the ROM bridge, which requires a valid output pointer.
