@@ -787,7 +787,8 @@ typedef struct {
 
 /* Open with HTTP request headers and a known POST/PUT body length. Headers
  * and strings belong to the caller and need only remain valid for this call.
- * On BBC's ROM-backed transport this returns FN_ERR_UNSUPPORTED. */
+ * BBC: requires ROM reason &09; encoded request must fit 128 bytes.
+ * Use fn_bbc_open_headers (fn_bbc.h) with caller storage for up to 512 bytes. */
 uint8_t fn_open_headers(fn_handle_t *handle, uint8_t method, const char *url,
                         uint8_t flags, const fn_http_header_t *headers,
                         uint16_t header_count, uint32_t body_len);

@@ -306,3 +306,8 @@ test: test-bbc-api-link
 test-bbc-ready:
 	bash tests/run_bbc_ready_test.sh
 test: test-bbc-ready
+
+.PHONY: test-bbc-headers
+test-bbc-headers:
+	bash tests/run_bbc_headers_test.sh
+test: test-bbc-headers

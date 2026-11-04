@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Link every public main-header function independently, for both BBC archives.
+"""Link every main-header and BBC-header function independently, for both BBC archives.
 
 Unlike discarded C address expressions, an assembly JMP is an unavoidable
 relocation. Missing APIs are explicit debt, not silently skipped declarations.
@@ -12,7 +12,7 @@ import subprocess
 
 ROOT = Path(__file__).resolve().parents[1]
 manifest = json.loads((ROOT / 'tests/bbc_api_capabilities.json').read_text())
-header = re.sub(r'/\*.*?\*/', '', (ROOT / 'include/fujinet-nio.h').read_text(), flags=re.S)
+header = re.sub(r'/\*.*?\*/', '', ((ROOT / 'include/fujinet-nio.h').read_text() + (ROOT / 'include/fn_bbc.h').read_text()), flags=re.S)
 names = set(re.findall(r'\b(fn_\w+)\s*\([^;{}]*\)\s*;', header))
 assert names == set(manifest), f'Update BBC capability inventory: {names ^ set(manifest)}'
 for target in ('bbc', 'bbc-clib'):

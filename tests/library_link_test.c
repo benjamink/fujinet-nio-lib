@@ -1,4 +1,10 @@
 #include <stdint.h>
+#ifdef __BBC__
+#include "fn_bbc.h"
+void reference_bbc_headers(fn_bbc_http_open_t *request) {
+    fn_bbc_open_headers(request);
+}
+#endif
 #include "fn_stream.h"
 #ifdef __ATARI__
 void reference_stream_entries(fn_stream_io_t *io) {
