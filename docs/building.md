@@ -37,8 +37,7 @@ This document describes how to build the fujinet-nio-lib library for various pla
 - [prc-tools-remix](https://github.com/jichu4n/prc-tools-remix)
   (`m68k-palmos-gcc` 2.95.3, `m68k-palmos-ar`) and the Palm OS 3.5 SDK.
   Its `tools/setup-palm-os-dev-env.sh` installs both on Debian; the Docker
-  image in [mozzwald/fujinet-palm](https://github.com/mozzwald/fujinet-palm)
-  (`docker/`) has them ready:
+  image in `fujinet-palm/docker/` has them ready:
 
   ```bash
   ../fujinet-palm/docker/palm-build.sh make palmos-serial
@@ -162,6 +161,10 @@ fujinet-nio-lib/
 ```
 
 ## Palm OS
+
+For the installed multi-transport `NioLib.prc`, `NioLibTest.prc` and lightweight
+client archive, use the [shared-library build guide](palmos-shared-library.md#build).
+The targets below build separate static archives and remain unchanged.
 
 `make palmos-serial` builds for Palm OS 3.1 and later. It opens the cradle
 serial port with the New Serial Manager on Palm OS 3.3 and later, and with the

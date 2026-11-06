@@ -1,5 +1,9 @@
 # Palm OS over a Springboard module
 
+This page describes the static `palmos-springboard` archive. Applications using
+the installed multi-transport library should follow the
+[shared NioLib guide](../palmos-shared-library.md).
+
 The `palmos-springboard` target builds `fujinet-nio-lib` for a Handspring Visor
 (Palm OS 3.5, m68k) that talks to `fujinet-nio` through an RP2350 module in the
 Springboard slot. The Palm never sees a serial port: it reads and writes the
@@ -98,7 +102,7 @@ them does not link them.
 The compiler is prc-tools (`m68k-palmos-gcc` 2.95.3) with the Palm OS 3.5 SDK
 headers: prc-tools-remix plus a Palm OS SDK set up with
 `palmdev-prep -d sdk-3.5`. The simplest way to get that is the Docker image in
-[mozzwald/fujinet-palm](https://github.com/mozzwald/fujinet-palm) (`docker/`:
+`fujinet-palm` (`docker/`:
 a `Dockerfile` and `palm-build.sh`, which mounts the checkout's parent
 directory so sibling checkouts resolve inside the container). The image is
 amd64-only and runs under emulation on Apple Silicon.
@@ -113,7 +117,7 @@ By default the build looks for a sibling checkout, `../fujinet-nio`; point
 make palmos-springboard
 make palmos-springboard SBNIO_ABI_INCLUDE=-I/path/to/fujinet-nio/bridges/rp2350-springboard/include
 
-# or through mozzwald's container, from this checkout
+# or through the fujinet-palm container, from this checkout
 ../fujinet-palm/docker/palm-build.sh make palmos-springboard
 ```
 

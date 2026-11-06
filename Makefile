@@ -43,6 +43,21 @@ all:
 	@echo "========================================="
 
 # Individual platform targets
+.PHONY: palmos-shared test-palmos-shared
+PALMOS_SHARED_PYTHON ?= python3
+PALMOS_SHARED_BUILD ?= build/palmos-shared-usb
+palmos-shared:
+	$(MAKE) -f makefiles/palmos-shared.mk B=$(PALMOS_SHARED_BUILD)
+
+test-palmos-shared:
+	PALMOS_SHARED_BUILD=$(PALMOS_SHARED_BUILD) $(PALMOS_SHARED_PYTHON) -m unittest discover -s tests -p 'test_palmos_shared*.py' -v
+
+.PHONY: test-palmos-usb-preparation
+test-palmos-usb-preparation:
+	$(PALMOS_SHARED_PYTHON) -m unittest discover -s tests -p 'test_palmos_usb_preparation.py' -v
+
+test: test-palmos-shared test-palmos-usb-preparation
+
 $(TARGETS) $(EXTRA_TARGETS):
 	@echo "Building for $@..."
 	$(MAKE) -f makefiles/build.mk TARGET=$@ PROGRAM=$(PROGRAM) lib
@@ -276,6 +291,8 @@ help:
 	@echo "  make test-amiga-transport - Run Amiga broker-client host tests"
 	@echo "  make test-stream-wake - Run stream transport idle-reclaim tests"
 	@echo "  make test-palmos-transport - Run Palm OS Springboard client host tests"
+	@echo "  make palmos-shared - Build NioLib.prc and NioLibTest.prc (prc-tools)"
+	@echo "  make test-palmos-shared - Check shared-library images and optional m68k execution"
 	@echo "  make test-all-build - Build all configured library targets"
 	@echo "  make check - Build all targets and run the fast host-side test suite"
 	@echo "  make test - Run all host-side wire tests"

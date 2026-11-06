@@ -1,0 +1,2 @@
+# Test-only actual m68k execution. Never linked or shipped with the Palm PRCs.
+unicorn==2.1.4
