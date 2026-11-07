@@ -48,6 +48,15 @@ COMPILER_FAMILY_palmos-springboard := prcgcc
 # Get compiler family for current target
 COMPILER_FAMILY := $(COMPILER_FAMILY_$(TARGET))
 
+# The cc65 target a build compiles for, normally the target itself. The C64
+# compiles with no target: cc65's c64 target translates every string literal to
+# PETSCII, but everything crossing FujiBus (URIs, keys, host names) is ASCII. Its
+# programs keep their strings in ASCII and convert only at the screen and the
+# keyboard. It still links against c64.lib; TARGET_CFLAGS_c64 restores the macros
+# the target would have defined.
+CC65_TARGET_c64 := none
+CC65_TARGET := $(if $(CC65_TARGET_$(TARGET)),$(CC65_TARGET_$(TARGET)),$(TARGET))
+
 # Transport family mapping
 # stream targets provide only a byte-channel implementation and share the common
 # SLIP/FujiBus transport in src/common/fn_transport_stream.c.
@@ -88,7 +97,7 @@ TARGET_CFLAGS_bbc-clib  := -DFN_MAX_SESSIONS=$(FN_MAX_SESSIONS_bbc-clib)
 TARGET_ASFLAGS_bbc-clib := --asm-define FN_MAX_SESSIONS=$(FN_MAX_SESSIONS_bbc-clib)
 
 # Commodore 64
-TARGET_CFLAGS_c64       :=
+TARGET_CFLAGS_c64       := -D__C64__=1 -D__CBM__=1
 TARGET_ASFLAGS_c64      :=
 
 # CoCo

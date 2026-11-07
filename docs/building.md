@@ -57,6 +57,7 @@ make
 ### Build for a specific platform:
 ```bash
 make atari      # Atari 8-bit
+make c64        # Commodore 64
 make apple2     # Apple II
 make coco       # Tandy CoCo
 make msdos      # all MS-DOS backend libraries

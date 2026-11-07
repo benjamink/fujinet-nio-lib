@@ -51,6 +51,7 @@ driver ABI.
 | `msdos-f5` | INT F5 backend | Sends raw NIO calls through the NIO build of `FUJINET.SYS`; the driver owns COM1. |
 | `bbc`, `bbc-clib` | `fn-rom`/MOS channels | Does not use the common direct transport stack. BBC delegates transport details to `fn-rom`. |
 | `atari` | SIO | Direct target-specific transport. |
+| `c64` | IEC serial bus | Direct target-specific transport, through the KERNAL's bus routines. |
 | `palmos-serial` | common stream transport over the Palm OS cradle serial port | New Serial Manager at 115200 baud, or the serial library before Palm OS 3.3. Reclaims the line after an idle spell (`FN_STREAM_WAKE_IDLE_MS`) because NIO may lend it to HotSync. |
 | `palmos-springboard` | Springboard module CS1 link | Packet-native; the module firmware owns the link to NIO. |
 
@@ -126,6 +127,23 @@ request that gets no reply is not sent again, since NIO may have acted on it.
 The register map and result codes are the shared ABI header `sbnio.h`, which
 lives in `fujinet-nio` and is not copied here. See
 [Palm OS Springboard](palmos/springboard.md).
+
+## Commodore 64 IEC Backend Notes
+
+The C64 target exchanges each unmodified FujiBus packet with IEC device 30 on
+channel 0, using the KERNAL's own LISTEN, SECOND, CIOUT, UNLSN, TALK, TKSA, ACPTR
+and UNTLK. UNLISTEN ends a request packet and the device runs it; the response is
+read with TALK up to the length in its own header. There is no SLIP, padding or
+segmentation, and one request is outstanding at a time. The bus contract is
+`docs/iec/nio-channel.md` in the fujinet-nio repository.
+
+Strings stay in ASCII. The library and its programs compile with `cc65 -t none`
+and `-D__C64__ -D__CBM__`, then link against `c64.lib`, because cc65's `c64` target
+would translate every literal to PETSCII. A C64 program converts only at its own
+screen and keyboard.
+
+The device holds the bus while a request runs, as a drive does while it seeks, so
+a local timeout does not exist: a slow request is a slow first byte.
 
 ## MS-DOS Backends
 

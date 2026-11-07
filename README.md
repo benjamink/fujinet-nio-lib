@@ -11,7 +11,7 @@ communicate with FujiNet NIO devices. It provides:
 
 - **Handle-based API** - Simple, intuitive session management
 - **FujiBus protocol** - Binary protocol with shared packet/checksum handling
-- **Multi-platform support** - Atari, BBC, MS-DOS, Amiga, Palm OS, and Linux
+- **Multi-platform support** - Atari, BBC, Commodore 64, MS-DOS, Amiga, Palm OS, and Linux
 - **Multi-compiler support** - CC65, Open Watcom, GCC, amiga-gcc, and prc-tools
 - **HTTP and TCP/TLS** - All protocols supported
 

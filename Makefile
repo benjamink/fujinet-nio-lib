@@ -7,13 +7,14 @@
 #   make atari      - Build for Atari
 #   make bbc        - Build for BBC B
 #   make bbc-clib   - Build for BBC B with clib ROM
+#   make c64        - Build for Commodore 64
 #   make linux      - build for linux/posix environment
 #   make clean      - Remove build artifacts
 #   make help       - Show this help
 
 # Supported targets
 # TARGETS = atari apple2 apple2enh bbc c64 coco msdos linux
-TARGETS = atari bbc bbc-clib msdos-serial msdos-ioctl msdos-f5 linux amiga
+TARGETS = atari bbc bbc-clib c64 msdos-serial msdos-ioctl msdos-f5 linux amiga
 EXTRA_TARGETS = amiga-driver palmos-serial palmos-springboard
 
 # Output library name
@@ -23,7 +24,7 @@ override PROGRAM := fujinet-nio
 .PHONY: all clean help disk-bbc disk-bbc-clib test-legacy test-mount-resolve \
 	test-appstore-read test-list-pages test-slot-catalog test-bbc test-bbc-scripted \
 	test-bbc-real test-fuji test-wifi test-disk test-disk-context test-session test-stream-wake test-open-ext test-open-wire test-ready-wire test-write-partial test-library-link \
-	test-amiga-transport test-palmos-transport test-atari-transport test-atari-hsio test-atari-proc test-atari-read-profile test-atari-list-pages test-atari-appkey-uri test-atari-parse-read test-atari-client-buffers test-atari-network-read test-atari-network-write test-atari-network-open test-atari-compact test-raw-transport-retry test \
+	test-amiga-transport test-c64-transport test-palmos-transport test-atari-transport test-atari-hsio test-atari-proc test-atari-read-profile test-atari-list-pages test-atari-appkey-uri test-atari-parse-read test-atari-client-buffers test-atari-network-read test-atari-network-write test-atari-network-open test-atari-compact test-raw-transport-retry test \
 	test-all-build check msdos $(TARGETS) $(EXTRA_TARGETS)
 
 # Default target: build all
@@ -219,6 +220,10 @@ test-atari-proc:
 test-atari-compact:
 	bash ./tests/run_atari_compact_test.sh
 
+test-c64-transport:
+	@echo "Running C64 IEC transport host test..."
+	bash ./tests/run_c64_transport_host_test.sh
+
 test-raw-transport-retry:
 	@echo "Running raw-call transport replay guard..."
 	bash ./tests/run_raw_transport_retry_test.sh
@@ -241,7 +246,7 @@ test-release:
 
 test: test-fuji-hsio test-package-atari test-release
 
-test: test-u1mb-clear test-library-link test-legacy test-mount-resolve test-appstore-read test-list-pages test-atari-list-pages test-atari-appkey-uri test-atari-parse-read test-atari-client-buffers test-atari-network-read test-atari-network-write test-atari-network-open test-slot-catalog test-fuji test-wifi test-disk test-disk-context test-session test-stream-wake test-open-ext test-open-wire test-ready-wire test-large-read test-write-partial test-amiga-transport test-palmos-transport test-atari-transport test-atari-hsio test-atari-proc test-atari-read-profile test-atari-compact test-raw-transport-retry
+test: test-u1mb-clear test-library-link test-legacy test-mount-resolve test-appstore-read test-list-pages test-atari-list-pages test-atari-appkey-uri test-atari-parse-read test-atari-client-buffers test-atari-network-read test-atari-network-write test-atari-network-open test-slot-catalog test-fuji test-wifi test-disk test-disk-context test-session test-stream-wake test-open-ext test-open-wire test-ready-wire test-large-read test-write-partial test-amiga-transport test-c64-transport test-palmos-transport test-atari-transport test-atari-hsio test-atari-proc test-atari-read-profile test-atari-compact test-raw-transport-retry
 
 # Fast required change check: compile every configured target, then run the
 # host-side tests and public archive-link test. Keep this as a recipe rather

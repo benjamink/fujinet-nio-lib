@@ -266,7 +266,7 @@ $(BUILDDIR):
 # Assemble ASM files (CC65 only)
 $(OBJDIR)/$(TARGET)/platform/$(PLATFORM)/%.o: $(SRCDIR)/platform/$(PLATFORM)/%.s $(PLATFORM_ASM_INCLUDES) | $(OBJDIR)/$(TARGET)/platform/$(PLATFORM)
 	@echo "  AS $<"
-	$(CC) -t $(TARGET) -c $(ASFLAGS) --listing $(@:.o=.lst) -o $@ $<
+	$(CC) -t $(CC65_TARGET) -c $(ASFLAGS) --listing $(@:.o=.lst) -o $@ $<
 
 # Compile C files
 ifneq (,$(filter $(COMPILER_FAMILY),gcc amigagcc))
@@ -316,15 +316,15 @@ else
 # CC65 compilation
 $(OBJDIR)/$(TARGET)/common/%.o: $(SRCDIR)/common/%.c | $(OBJDIR)/$(TARGET)/common
 	@echo "  CC $<"
-	$(CC) -t $(TARGET) -c $(CFLAGS) --create-dep $(@:.o=.d) --listing $(@:.o=.lst) -o $@ $<
+	$(CC) -t $(CC65_TARGET) -c $(CFLAGS) --create-dep $(@:.o=.d) --listing $(@:.o=.lst) -o $@ $<
 
 $(OBJDIR)/$(TARGET)/legacy/%.o: $(SRCDIR)/legacy/%.c | $(OBJDIR)/$(TARGET)/legacy
 	@echo "  CC $<"
-	$(CC) -t $(TARGET) -c $(CFLAGS) --create-dep $(@:.o=.d) --listing $(@:.o=.lst) -o $@ $<
+	$(CC) -t $(CC65_TARGET) -c $(CFLAGS) --create-dep $(@:.o=.d) --listing $(@:.o=.lst) -o $@ $<
 
 $(OBJDIR)/$(TARGET)/platform/$(PLATFORM)/%.o: $(SRCDIR)/platform/$(PLATFORM)/%.c | $(OBJDIR)/$(TARGET)/platform/$(PLATFORM)
 	@echo "  CC $<"
-	$(CC) -t $(TARGET) -c $(CFLAGS) --create-dep $(@:.o=.d) --listing $(@:.o=.lst) -o $@ $<
+	$(CC) -t $(CC65_TARGET) -c $(CFLAGS) --create-dep $(@:.o=.d) --listing $(@:.o=.lst) -o $@ $<
 endif
 
 # Create library

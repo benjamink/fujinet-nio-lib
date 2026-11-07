@@ -537,6 +537,8 @@ typedef fn_service_io_t fn_slot_catalog_io_t;
 #define FN_DISK_TYPE_RAW  4
 #define FN_DISK_TYPE_DC42 5 /* Apple DiskCopy 4.2 (Mac floppy); mount only, no Create */
 #define FN_DISK_TYPE_XEXBOOT 6 /* Atari .xex/.com/.exe served as a synthesised read-only boot disk (PicoBoot); mount only, no Create */
+#define FN_DISK_TYPE_D64  7 /* Commodore 1541 image; mount only, no Create */
+#define FN_DISK_TYPE_PRG  8 /* Commodore .prg served as a synthesised read-only one-file 1541 disk; mount only, no Create */
 
 /*
  * Why a DiskDevice call failed (fujinet-nio disk::DiskError). A failed call
