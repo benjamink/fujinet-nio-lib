@@ -91,7 +91,7 @@ The suggestion uses reachable version tags, conventional `feat` and
 breaking-change markers, and common feature verbs; inspect it rather than treating it as a compatibility
 guarantee. Preparation requires a clean committed tree, runs `make check`,
 exports the committed source and the committed Amiga driver ABI, and writes
-versioned ZIPs for Atari compact and original, BBC, BBC clib, all three MS-DOS
+versioned ZIPs for Atari compact and original, BBC, BBC clib, C64, all three MS-DOS
 transports, Amiga application and driver, and Linux. `RELEASE_NOTES.md` and
 `CHANGELOG.md` list every non-merge commit and a diffstat; `SHA256SUMS` and
 per-package manifests record artifact and build provenance. The first release
@@ -151,6 +151,7 @@ fujinet-nio-lib/
   build/
     fujinet-nio-atari.lib    # Atari library
     fujinet-nio-linux.a      # Linux static library
+    fujinet-nio-c64.lib      # Commodore 64 library (IEC bus)
     fujinet-nio-apple2.lib   # Apple II library (planned)
     fujinet-nio-coco.lib     # CoCo library (planned)
     fujinet-nio-msdos-serial.lib # MS-DOS direct COM backend

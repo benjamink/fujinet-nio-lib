@@ -36,6 +36,7 @@ static size_t g_reply_pos;
 static uint8_t g_eoi_after_last;   /* flag EOI with the last byte, as a device does */
 static uint8_t g_received[1024];
 static size_t g_received_len;
+static size_t g_capacity;          /* bytes the device takes before it refuses; 0: no limit */
 
 void cbm_k_listen(uint8_t device)
 {
@@ -51,6 +52,10 @@ void cbm_k_second(uint8_t secondary)
 void cbm_k_ciout(uint8_t value)
 {
     log_call("D%02x ", value);
+    if (g_capacity && g_received_len >= g_capacity) {
+        g_c64_st |= 0x80; /* refused from the byte that overflows the packet */
+        return;
+    }
     g_received[g_received_len++] = value;
 }
 
@@ -101,6 +106,7 @@ static void reset(void)
     g_reply_pos = 0;
     g_eoi_after_last = 1;
     g_received_len = 0;
+    g_capacity = 0;
     memset(g_response, 0xEE, sizeof(g_response));
     _fn_transport_ctx.request = NULL;
     _fn_transport_ctx.req_len = 0;
@@ -251,6 +257,75 @@ static void test_exchange_refuses_a_length_that_does_not_fit(void)
     CHECK("too short", fn_transport_exchange() == FN_ERR_TRANSPORT);
 }
 
+static void test_exchange_reports_a_packet_the_device_refuses(void)
+{
+    static const uint8_t request[] = { 0xFD, 0x01, 0x07, 0x00, 0x11, 0x00, 0x42, 0x43 };
+
+    reset();
+    g_capacity = 4;
+    _fn_transport_ctx.request = request;
+    _fn_transport_ctx.req_len = sizeof(request);
+    set_reply(6, 6);
+    CHECK("refused", fn_transport_exchange() == FN_ERR_TRANSPORT);
+    CHECK("only the capacity was taken", g_received_len == 4);
+    CHECK("no talk after a refusal", strchr(g_log, 'T') == NULL);
+}
+
+static void test_exchange_reports_a_timeout_with_no_eoi(void)
+{
+    static const uint8_t request[] = { 0xFD };
+
+    reset();
+    _fn_transport_ctx.request = request;
+    _fn_transport_ctx.req_len = sizeof(request);
+    set_reply(20, 10); /* the device stops mid-packet and never flags EOI */
+    g_eoi_after_last = 0;
+
+    CHECK("exchange fails", fn_transport_exchange() == FN_ERR_TRANSPORT);
+    CHECK("untalk still sent", strstr(g_log, "X ") != NULL);
+    CHECK("no length", _fn_transport_ctx.resp_len == 0);
+}
+
+static void test_exchange_reports_eoi_before_the_header_is_complete(void)
+{
+    static const uint8_t request[] = { 0xFD };
+
+    reset();
+    _fn_transport_ctx.request = request;
+    _fn_transport_ctx.req_len = sizeof(request);
+    set_reply(20, 2); /* EOI comes with the second byte */
+
+    CHECK("exchange fails", fn_transport_exchange() == FN_ERR_TRANSPORT);
+    CHECK("untalk still sent", strstr(g_log, "X ") != NULL);
+}
+
+static void test_exchange_fills_the_512_byte_baseline_exactly(void)
+{
+    static const uint8_t request[] = { 0xFD };
+    static uint8_t big[513];
+
+    reset();
+    memset(big, 0xEE, sizeof(big));
+    _fn_transport_ctx.request = request;
+    _fn_transport_ctx.req_len = sizeof(request);
+    _fn_transport_ctx.response = big;
+    _fn_transport_ctx.resp_max = 512;
+
+    set_reply(512, 512);
+    CHECK("512 fits", fn_transport_exchange() == FN_OK);
+    CHECK("512 length", _fn_transport_ctx.resp_len == 512);
+    CHECK("512 bytes", memcmp(big, g_reply, 512) == 0);
+    CHECK("nothing past the buffer", big[512] == 0xEE);
+
+    memset(big, 0xEE, sizeof(big));
+    g_log_len = 0;
+    g_log[0] = 0;
+    g_reply_pos = 0;
+    set_reply(513, 513);
+    CHECK("513 does not", fn_transport_exchange() == FN_ERR_TRANSPORT);
+    CHECK("513 stopped at the header", big[4] == 0xEE);
+}
+
 int main(void)
 {
     test_init_addresses_the_channel_and_sends_nothing();
@@ -263,6 +338,10 @@ int main(void)
     test_exchange_reports_a_device_with_nothing_to_send();
     test_exchange_reports_a_reply_cut_short();
     test_exchange_refuses_a_length_that_does_not_fit();
+    test_exchange_reports_a_packet_the_device_refuses();
+    test_exchange_reports_a_timeout_with_no_eoi();
+    test_exchange_reports_eoi_before_the_header_is_complete();
+    test_exchange_fills_the_512_byte_baseline_exactly();
 
     if (failures) {
         fprintf(stderr, "c64 transport host test: %u failure(s)\n", failures);

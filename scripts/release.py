@@ -13,7 +13,7 @@ import zipfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-TARGETS = ('atari-compact', 'atari-original', 'bbc', 'bbc-clib',
+TARGETS = ('atari-compact', 'atari-original', 'bbc', 'bbc-clib', 'c64',
            'msdos-serial', 'msdos-ioctl', 'msdos-f5', 'amiga', 'amiga-driver', 'linux')
 
 
@@ -244,7 +244,7 @@ def prepare(version, revision, base, output, driver, name):
             shutil.copy2(archive, stage / archive_name)
             for notice in ('LICENSE', 'THIRD_PARTY.md'):
                 shutil.copy2(source / notice, stage / notice)
-            tool = 'cc65' if target.startswith(('atari-', 'bbc')) else ('watcom' if target.startswith('msdos-') else ('amiga' if target.startswith('amiga') else 'linux'))
+            tool = 'cc65' if target.startswith(('atari-', 'bbc', 'c64')) else ('watcom' if target.startswith('msdos-') else ('amiga' if target.startswith('amiga') else 'linux'))
             manifest = {'version': version, 'target': target, 'source_commit': revision,
                         'compiler': tools[tool], 'build_command': ' '.join(command),
                         'archive_sha256': hashlib.sha256(archive.read_bytes()).hexdigest()}

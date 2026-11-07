@@ -145,6 +145,17 @@ screen and keyboard.
 The device holds the bus while a request runs, as a drive does while it seeks, so
 a local timeout does not exist: a slow request is a slow first byte.
 
+Two limits to know about:
+
+- `fn_init` addresses device 30 with no data to check it is there. Real hardware
+  reports a missing device at once. The emulator's bridge ignores the reply to that
+  address, so under VICE init succeeds with no firmware running and the first
+  request is the one that fails with `FN_ERR_TRANSPORT`.
+- The KERNAL has one status byte (`ST`, `$90`), shared with every other bus user.
+  Each exchange clears it first and leaves the transport's own result in it. A
+  program that also does KERNAL file I/O must read `ST` before calling the library,
+  not after.
+
 ## MS-DOS Backends
 
 MS-DOS has two practical runtime models:
