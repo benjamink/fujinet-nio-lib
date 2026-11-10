@@ -11,6 +11,10 @@ Err HsCardAttrGet(UInt16 cardNo, UInt16 attr, void *valueP)
 
 enum { hsAttrRemovable = 0, hsAttrHwInstalled = 1, hsAttrCsBase = 3, hsAttrCsSize = 4 };
 
+#ifndef FN_PALMOS_CARD_ATTR_GET
+#define FN_PALMOS_CARD_ATTR_GET HsCardAttrGet
+#endif
+
 uint32_t fn_palmos_open(void)
 {
     uint16_t card;
@@ -20,9 +24,9 @@ uint32_t fn_palmos_open(void)
     if (_fn_palmos_cs1) return _fn_palmos_cs1;
     for (card = 1; card < 4; card++) {
         removable = installed = 0;
-        if (HsCardAttrGet(card, hsAttrRemovable, &removable) ||
-            HsCardAttrGet(card, hsAttrHwInstalled, &installed) || !removable || !installed ||
-            HsCardAttrGet(card, hsAttrCsBase, &base) || HsCardAttrGet(card, hsAttrCsSize, &size))
+        if (FN_PALMOS_CARD_ATTR_GET(card, hsAttrRemovable, &removable) ||
+            FN_PALMOS_CARD_ATTR_GET(card, hsAttrHwInstalled, &installed) || !removable || !installed ||
+            FN_PALMOS_CARD_ATTR_GET(card, hsAttrCsBase, &base) || FN_PALMOS_CARD_ATTR_GET(card, hsAttrCsSize, &size))
             continue;
         /* CS1 sits right above the card's CS0 window. */
         _fn_palmos_cs1 = base + size;

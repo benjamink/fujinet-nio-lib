@@ -12,6 +12,10 @@
 #define SEND_TRIES 3
 #define READ_RETRIES 3
 
+#ifndef FN_PALMOS_EXPIRED
+#define FN_PALMOS_EXPIRED(start, wait) (TimGetTicks() - (start) > (wait))
+#endif
+
 /* BEGIN, the bytes two per DATA word (first one high), then CHECK over them. */
 static void send_request(const uint8_t *req, uint16_t len)
 {
@@ -82,7 +86,7 @@ uint16_t fn_palmos_exchange(const uint8_t *req, uint16_t len, uint8_t *resp, uin
         FN_PALMOS_WR(SBN_W_DOORBELL, _fn_palmos_seq);
         start = TimGetTicks();
         while (FN_PALMOS_RD(SBN_R_RESP_SEQ) != _fn_palmos_seq)
-            if (TimGetTicks() - start > wait) return FN_PALMOS_NO_ANSWER;
+            if (FN_PALMOS_EXPIRED(start, wait)) return FN_PALMOS_NO_ANSWER;
         result = FN_PALMOS_RD(SBN_R_RESULT);
     }
     /* Only a good result has a reply to read. */

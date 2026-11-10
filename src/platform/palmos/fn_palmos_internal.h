@@ -13,7 +13,14 @@ extern uint8_t _fn_palmos_seq;   /* last doorbell sequence sent */
 
 /* CS1 is plain 16-bit MOVE.W cycles. The real build keeps bare volatile
  * accesses; the host test swaps in a fake module behind the same macros. */
-#ifdef FN_PALMOS_HOST_TEST
+#ifdef FN_PALMOS_SHARED
+#include "shared/private.h"
+typedef uint32_t fn_palmos_port_t;
+#define FN_PALMOS_GET(port)     nl_bus_read(((port) += 2) - 2)
+#define FN_PALMOS_PUT(port, v)  nl_bus_write((port), (v))
+#define FN_PALMOS_RD(offset)    nl_bus_read(_fn_palmos_cs1 + (offset))
+#define FN_PALMOS_WR(reg, v)    nl_bus_write(_fn_palmos_cs1 + SBN_W(reg), (v))
+#elif defined(FN_PALMOS_HOST_TEST)
 uint16_t fn_palmos_test_read(uint32_t address);
 void fn_palmos_test_write(uint32_t address, uint16_t value);
 typedef uint32_t fn_palmos_port_t;

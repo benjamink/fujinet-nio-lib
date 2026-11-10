@@ -1,5 +1,9 @@
 # Palm OS over a Springboard module
 
+This page describes the static `palmos-springboard` archive. Applications using
+the installed multi-transport library should follow the
+[shared NioLib guide](../palmos-shared-library.md).
+
 The `palmos-springboard` target builds `fujinet-nio-lib` for a Handspring Visor
 (Palm OS 3.5, m68k) that talks to `fujinet-nio` through an RP2350 module in the
 Springboard slot. The Palm never sees a serial port: it reads and writes the
@@ -95,13 +99,11 @@ them does not link them.
 
 ## Building
 
-The compiler is prc-tools (`m68k-palmos-gcc` 2.95.3) with the Palm OS 3.5 SDK
-headers: prc-tools-remix plus a Palm OS SDK set up with
-`palmdev-prep -d sdk-3.5`. The simplest way to get that is the Docker image in
-[mozzwald/fujinet-palm](https://github.com/mozzwald/fujinet-palm) (`docker/`:
-a `Dockerfile` and `palm-build.sh`, which mounts the checkout's parent
-directory so sibling checkouts resolve inside the container). The image is
-amd64-only and runs under emulation on Apple Silicon.
+Use [palmdev-toolchain](https://github.com/mozzwald/palmdev-toolchain), or native
+[prc-tools-remix](https://github.com/mozzwald/prc-tools-remix) and an installed
+Palm SDK. SDK 3.1 is the default; `PALMOS_SDK_VERSION=3.5` is optional. See the
+[build guide](../palmos-shared-library.md#build) for explicit setup, environment
+variables, SDK sources and workspace mounting. No tools are auto-installed.
 
 The library needs `sbnio.h` from `fujinet-nio`
 (`bridges/rp2350-springboard/include`). It is not copied into this repository.
@@ -113,18 +115,18 @@ By default the build looks for a sibling checkout, `../fujinet-nio`; point
 make palmos-springboard
 make palmos-springboard SBNIO_ABI_INCLUDE=-I/path/to/fujinet-nio/bridges/rp2350-springboard/include
 
-# or through mozzwald's container, from this checkout
-../fujinet-palm/docker/palm-build.sh make palmos-springboard
+# or explicitly select the installed toolchain container
+make palmos-springboard PALMOS_BUILDER=container
 ```
 
-The result is `build/fujinet-nio-palmos-springboard.a`. The target is part of
+The result is `build/palmos-3.1/fujinet-nio-palmos-springboard.a`. The target is part of
 `make check` (`EXTRA_TARGETS`) but not of the default `make`.
 
 An application compiles and links against it like this:
 
 ```bash
-m68k-palmos-gcc -O2 -Wall -palmos3.5 \
-    -Iinclude -Iinclude/palmos app.c build/fujinet-nio-palmos-springboard.a -o app
+m68k-palmos-gcc -O2 -Wall -palmos3.1 -DNIO_PALMOS_SDK31 \
+    -Iinclude -Iinclude/palmos app.c build/palmos-3.1/fujinet-nio-palmos-springboard.a -o app
 build-prc -o app.prc app.def app *.bin
 ```
 

@@ -1,8 +1,10 @@
 # Transport Backends
 
 `fujinet-nio` firmware can expose the FujiBus/NIO protocol through multiple
-transports and channels. `fujinet-nio-lib` is narrower by design: one library
-build selects one channel at compile time.
+transports and channels. Static `fujinet-nio-lib` archives generally select one
+channel at compile time. The installed [Palm NioLib](palmos-shared-library.md)
+is a Palm-specific exception: one common core selects CS1, serial or Handspring
+USB once per foreground client session. Other platform builds are unchanged.
 
 That channel can be any physical path that can carry the selected transport's
 framing. The public library API is not serial-specific, and the common stream
@@ -54,6 +56,7 @@ driver ABI.
 | `c64` | IEC serial bus | Direct target-specific transport, through the KERNAL's bus routines. |
 | `palmos-serial` | common stream transport over the Palm OS cradle serial port | New Serial Manager at 115200 baud, or the serial library before Palm OS 3.3. Reclaims the line after an idle spell (`FN_STREAM_WAKE_IDLE_MS`) because NIO may lend it to HotSync. |
 | `palmos-springboard` | Springboard module CS1 link | Packet-native; the module firmware owns the link to NIO. |
+| `palmos-shared` | Installed Palm system library with runtime CS1/serial/USB selection | One common core; raw packets for CS1/HsUs USB, SLIP for serial. |
 
 ## Atari SIO Backend Notes
 
@@ -191,6 +194,11 @@ future MS-DOS parallel-port channel if that channel implements the byte-channel
 interface and presents the same ordered byte-stream semantics.
 
 ## Why Not Runtime Transport Selection?
+
+This rationale applies to the compile-time static archives. The Palm system
+library deliberately supports a bounded platform-private dispatcher, as described
+in the [shared-library guide](palmos-shared-library.md); it does not introduce
+a general runtime-selection framework for other targets.
 
 Runtime channel selection is possible on larger targets, but it should not be the
 default model for this repository.

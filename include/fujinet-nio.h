@@ -1053,10 +1053,13 @@ uint8_t fn_set_body_length(uint16_t len);
 uint8_t fn_set_content_profile(uint8_t profile);
 
 /**
- * @brief Configure JSON translation for an already-open BBC fn-rom network channel.
+ * @brief Configure JSON translation for an already-open network channel.
  *
- * This maps to `OSWORD &78` reason `&00` on BBC and returns
- * `FN_ERR_UNSUPPORTED` on platforms that do not expose an equivalent API.
+ * BBC maps this to `OSWORD &78` reason `&00`. The Palm shared-library client
+ * uses NioLib ABI 1.4 TranslateConfigure on the existing handle/cached body;
+ * FN_ERR_NOT_READY means the selector was applied but the body is pending:
+ * poll fn_read(handle, 0, ...) rather than resending configuration.
+ * Other builds return FN_ERR_UNSUPPORTED.
  */
 uint8_t fn_json_query(fn_handle_t handle, const char *path);
 

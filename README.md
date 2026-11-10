@@ -34,6 +34,7 @@ communicate with FujiNet NIO devices. It provides:
 - **[Building](docs/building.md)** - Build instructions for all platforms
 - **[Transport Backends](docs/transport-backends.md)** - How platform library targets map to NIO channels
 - **[Palm OS Springboard](docs/palmos/springboard.md)** - Handspring Visor over a Springboard module's CS1 link
+- **[Installed Palm NioLib](docs/palmos-shared-library.md)** — One system library for CS1, serial and Handspring USB, with a lightweight application client
 - **[Examples](examples/README.md)** - Example applications and usage
 
 The legacy appkey compatibility functions are available via
@@ -165,7 +166,7 @@ int main(void) {
 - Linux native target for PC-based testing using the common FujiBus/NIO stream transport over a POSIX serial or PTY channel
 - MS-DOS builds with Open Watcom and produces serial, `FUJINET.SYS` IOCTL, and INT F5 backend libraries
 - BBC target now uses the installed `fn-rom` network ROM through MOS channel opens and `OSWORD &78`
-- FujiBus protocol with SLIP framing
+- FujiBus protocol; SLIP for stream backends, raw packets for packet-native backends
 - Handle-based session management
 
 **In Progress:**
@@ -192,7 +193,8 @@ int main(void) {
 | Linux | stream over POSIX serial/PTY | GCC | ✅ Working |
 | Amiga applications | `fujinet-nio.device` broker | amiga-gcc | ✅ Working |
 | Amiga resident driver | `fujinet-nio.device` broker | amiga-gcc | ✅ Working |
-| Palm OS (Handspring Visor) | Springboard module CS1 link | prc-tools | ✅ Working |
+| Palm OS static archives | Springboard CS1 or serial | prc-tools | Implemented; serial hardware unqualified |
+| Palm OS installed NioLib | Runtime CS1 / serial / Handspring USB selection | prc-tools | CS1 and Linux USB tested on Visor Prism; serial hardware unqualified |
 
 ## Differences from fujinet-lib
 
@@ -220,7 +222,7 @@ Contributions are welcome! Please ensure:
 
 ## Related Projects
 
-- [fujinet-nio](https://github.com/FujiNetWIFI/fujinet-nio) - FujiNet firmware rewrite
+- `fujinet-nio` - FujiNet firmware rewrite
 - [fujinet-lib](https://github.com/FujiNetWIFI/fujinet-lib) - Legacy library (reference)
 - [cc65](https://github.com/cc65/cc65) - 6502 C compiler
 

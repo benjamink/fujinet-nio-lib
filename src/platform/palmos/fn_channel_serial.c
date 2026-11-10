@@ -9,7 +9,7 @@
  */
 
 #include <PalmOS.h>
-#include <SerialMgrOld.h>
+#include "NioSerialCompat.h"
 
 #include "fujinet-nio.h"
 #include "fn_channel.h"

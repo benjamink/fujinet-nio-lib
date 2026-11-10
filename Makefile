@@ -36,7 +36,7 @@ all:
 		echo ""; \
 		echo "Building for $$target..."; \
 		echo "-----------------------------------------"; \
-		$(MAKE) -f makefiles/build.mk TARGET=$$target PROGRAM=$(PROGRAM) lib || exit 1; \
+		$(MAKE) $$target || exit 1; \
 	done
 	@echo ""
 	@echo "========================================="
@@ -44,9 +44,33 @@ all:
 	@echo "========================================="
 
 # Individual platform targets
-$(TARGETS) $(EXTRA_TARGETS):
+.PHONY: palmos-shared test-palmos-shared
+PALMOS_SHARED_PYTHON ?= python3
+PALMOS_SDK_VERSION ?= 3.1
+PALMOS_SHARED_BUILD ?= build/palmos-shared-$(PALMOS_SDK_VERSION)
+PALMOS_BUILDER ?= auto
+PALMDEV_TOOLCHAIN ?= $(abspath ../palmdev-toolchain)
+export PALMOS_SDK_VERSION PALMOS_BUILDER PALMDEV_TOOLCHAIN
+palmos-shared:
+	bash scripts/palmos-build.sh $(MAKE) -f makefiles/palmos-shared.mk B=$(PALMOS_SHARED_BUILD) $(if $(SBNIO_ABI_INCLUDE),SBNIO_ABI_INCLUDE="$(SBNIO_ABI_INCLUDE)") $(if $(HANDSPRING_INCLUDE),HANDSPRING_INCLUDE="$(HANDSPRING_INCLUDE)")
+
+test-palmos-shared:
+	PALMOS_SHARED_BUILD=$(PALMOS_SHARED_BUILD) $(PALMOS_SHARED_PYTHON) scripts/palmos_test_preflight.py
+	PALMOS_SHARED_BUILD=$(PALMOS_SHARED_BUILD) $(PALMOS_SHARED_PYTHON) -m unittest discover -s tests -p 'test_palmos_shared*.py' -v
+
+test: test-palmos-shared
+
+.PHONY: test-palmos-build
+test-palmos-build:
+	python3 -m unittest discover -s tests -p 'test_palmos_build.py' -v
+test: test-palmos-build
+
+$(filter-out palmos-serial palmos-springboard,$(TARGETS) $(EXTRA_TARGETS)):
 	@echo "Building for $@..."
 	$(MAKE) -f makefiles/build.mk TARGET=$@ PROGRAM=$(PROGRAM) lib
+
+palmos-serial palmos-springboard:
+	bash scripts/palmos-build.sh $(MAKE) -f makefiles/build.mk TARGET=$@ PROGRAM=$(PROGRAM) $(if $(SBNIO_ABI_INCLUDE),SBNIO_ABI_INCLUDE="$(SBNIO_ABI_INCLUDE)") lib
 
 msdos: msdos-serial msdos-ioctl msdos-f5
 
@@ -260,6 +284,7 @@ check:
 		echo "Building extra target $$target..."; \
 		$(MAKE) $$target || exit 1; \
 	done
+	$(MAKE) palmos-shared
 	$(MAKE) test
 
 # Help
@@ -281,6 +306,8 @@ help:
 	@echo "  make test-amiga-transport - Run Amiga broker-client host tests"
 	@echo "  make test-stream-wake - Run stream transport idle-reclaim tests"
 	@echo "  make test-palmos-transport - Run Palm OS Springboard client host tests"
+	@echo "  make palmos-shared - Build NioLib.prc and NioLibTest.prc (prc-tools)"
+	@echo "  make test-palmos-shared - Require shared-library images and m68k execution"
 	@echo "  make test-all-build - Build all configured library targets"
 	@echo "  make check - Build all targets and run the fast host-side test suite"
 	@echo "  make test - Run all host-side wire tests"
@@ -303,6 +330,9 @@ help:
 	@echo "  CC65_HOME   - cc65 checkout root (required for bbc/bbc-clib)"
 	@echo "  CC65_BASE   - accepted as an alias for CC65_HOME"
 	@echo "  SBNIO_ABI_INCLUDE - -I path to sbnio.h for palmos-springboard"
+	@echo "  PALMOS_SDK_VERSION - 3.1 (default) or optional 3.5"
+	@echo "  PALMOS_BUILDER - auto (default), native, or container"
+	@echo "  PALMDEV_TOOLCHAIN - installed palmdev-toolchain checkout"
 	@echo ""
 	@echo "Output:"
 	@echo "  Libraries are placed in build/"
