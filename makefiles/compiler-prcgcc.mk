@@ -7,8 +7,8 @@
 CC      = m68k-palmos-gcc
 AR      = m68k-palmos-ar
 
-# -palmos3.5 puts the SDK headers (PalmOS.h) on the include path
-CFLAGS  = -Wall -O2 -palmos3.5
+include makefiles/palmos-sdk.mk
+CFLAGS  = -Wall -O2 $(PALMOS_SDK_FLAGS)
 
 # Archiver flags
 ARFLAGS = rcs

@@ -1,6 +1,7 @@
 # Installed Palm OS NioLib
 
-`NioLib.prc` is a Palm OS 3.5 system shared library containing the common NIO
+`NioLib.prc` is a Palm OS system shared library built with SDK 3.1 by default
+(SDK 3.5 is optional), containing the common NIO
 packet/service code and three Palm-private backends. Applications link the small
 `libniolib-client.a` adapter instead of embedding a complete NIO implementation.
 The adapter exposes familiar `fn_*` calls and checks the installed library's ABI
@@ -21,34 +22,72 @@ in [building](building.md) and [Springboard](palmos/springboard.md).
 
 ## Build
 
-Requirements: prc-tools GCC 2.95.3, Palm OS SDK 3.5, PilRC, build-prc 2.3, Python 3,
-Handspring SDK `Include/UsbMgr.h`, and `sbnio.h` from
-`fujinet-nio/bridges/rp2350-springboard/include`. SDK headers are external inputs,
-not vendored. Use the existing `fujinet-palm-springboard-tools` Docker image
-(see the [Palm toolchain reference](palmos/springboard.md#building)); Apple
-Silicon needs emulation for that amd64 image.
+Use the separate [palmdev-toolchain](https://github.com/mozzwald/palmdev-toolchain)
+repository, reviewed at commit `4161cf9`. Its pinned tools are
+[prc-tools-remix](https://github.com/mozzwald/prc-tools-remix) 2.3.6 (GCC
+2.95.3-kgpd), [PilRC](https://github.com/mozzwald/pilrc) 3.2.91 and Python 3.
+Build-prc retains its component banner 2.3 and PilRC its older banner 3.2.90.
+The common image name is `palmdev-toolchain:local`. Compiler installation and
+image recipes live there; NioLib never clones or installs tools automatically.
 
-From this repository with the tools on PATH:
-
-```sh
-make palmos-shared PALMOS_SHARED_BUILD=build/palmos-shared-usb \
-  SBNIO_ABI_INCLUDE=-I../fujinet-nio/bridges/rp2350-springboard/include \
-  HANDSPRING_INCLUDE=-I/path/to/Handspring/Include
-```
-
-Or, from a parent directory containing sibling `fujinet-nio-lib` and
-`fujinet-nio` checkouts, with `HANDSPRING_SDK` set to the SDK directory containing
-`Include/`:
+One-time explicit setup, alongside the NIO repositories:
 
 ```sh
-docker run --rm --network none --user "$(id -u):$(id -g)" \
-  -v "$PWD:/work" -v "$HANDSPRING_SDK:/handspring:ro" \
-  -w /work/fujinet-nio-lib fujinet-palm-springboard-tools \
-  make palmos-shared PALMOS_SHARED_BUILD=build/palmos-shared-usb
+git clone https://github.com/mozzwald/palmdev-toolchain ../palmdev-toolchain
+git -C ../palmdev-toolchain checkout 4161cf9
+(cd ../palmdev-toolchain && ./setup.sh)
 ```
+
+Select Palm SDK 3.1 and the optional Handspring SDK; install SDK 3.5 too if you
+want the optional build. Review each agreement. SDK sources/revisions and
+acceptance are managed by the toolchain, not this library. The selected SDK
+is mounted read-only; it is not part of the image. Linux amd64 is tested;
+macOS/ARM use the wrapper's amd64 container support and still need validation.
+
+Handspring's `UsbMgr.h` is also available in `Handspring.zip` on
+[PalmDB's Palm OS SDK page](https://palmdb.net/app/palm-os-sdk). Its EULA
+restricts redistribution: do not vendor the SDK or publish it in the image.
+The toolchain installer currently obtains its pinned Handspring SDK from
+[the SDK mirror](https://github.com/mozzwald/handspring-sdk) and records local
+agreement acceptance; it does not download the PalmDB archive. The required
+layout is `Include/UsbMgr.h`. The wrapper exports `HANDSPRING_INCLUDE` as the
+read-only container directory `/toolchain/.local/sdk/handspring/Include`.
+
+From this library checkout:
+
+```sh
+make palmos-shared                         # native tools if available, else container
+make palmos-shared PALMOS_BUILDER=container # explicitly select container
+make palmos-shared PALMOS_SDK_VERSION=3.5   # optional SDK build
+```
+
+`PALMOS_BUILDER=auto|native|container` controls selection. `PALMDEV_TOOLCHAIN`
+points to a non-sibling toolchain checkout; `NIO_WORKSPACE` changes the mounted
+workspace (default: the project parent). This includes sibling
+`fujinet-nio/bridges/rp2350-springboard/include/sbnio.h`, an external NIO ABI
+input. Missing tools produce setup instructions and a failing Palm target.
+Non-Palm targets never inspect the toolchain. `make check` deliberately requires
+Palm and all other configured target toolchains.
+
+The equivalent direct wrapper invocation is:
+
+```sh
+../palmdev-toolchain/palm-build --sdk 3.1 --workspace "$(dirname "$PWD")" \
+  --project "$PWD" -- make -f makefiles/palmos-shared.mk
+```
+
+The wrapper performs the Docker run with the selected SDK, per-invocation GCC
+specs and read-only toolchain mount. A bare `docker run IMAGE make` has no SDK.
+For native builds, pass `HANDSPRING_INCLUDE=/path/to/Handspring/Include` (a
+directory, without `-I`) and use `PALMOS_BUILDER=native`. Native tools must have
+the selected SDK configured through palmdev-prep. Both paths use
+`PALMOS_SDK_VERSION=3.1` by default, with compatibility declarations for legacy
+headers and feature-guarded newer serial traps. No OS 3.5-only call was found.
+Actual 3.1 ROM compatibility remains subject to device qualification.
 
 The target builds **NioLib.prc**, **NioLibTest.prc** and **libniolib-client.a**
-in that output directory, with maps, symbols, disassembly and `verification.json`.
+in `build/palmos-shared-3.1` (or `build/palmos-shared-3.5`), with maps,
+symbols, disassembly and `verification.json`. Override with `PALMOS_SHARED_BUILD`.
 Use a new output directory when preserving qualified binaries. No historical
 bundle, Springboard ROM rebuild or firmware flash is required.
 
@@ -78,9 +117,9 @@ Applications include `NioLibClient.h`, link only the client archive and balance
 with the toolchain on PATH:
 
 ```sh
-m68k-palmos-gcc -O2 -palmos3.5 \
+m68k-palmos-gcc -O2 -palmos3.1 -DNIO_PALMOS_SDK31 \
   -I../fujinet-nio-lib/include/palmos -I../fujinet-nio-lib/include \
-  app.c ../fujinet-nio-lib/build/palmos-shared-usb/libniolib-client.a -o app
+  app.c ../fujinet-nio-lib/build/palmos-shared-3.1/libniolib-client.a -o app
 ```
 
 Package the application resources with its own build-prc target. Do not link a
@@ -89,7 +128,7 @@ using earlier compatible traps need no rebuild merely to select USB.
 
 ## Application contract
 
-Current identity is **NioLib / libr / NiL1**, ABI **1.4**, implementation **7**.
+Current identity is **NioLib / libr / NiL1**, ABI **1.5**, implementation **8**.
 See [ABI reference](palmos-shared-abi.md) for capabilities, traps and preferences.
 The client supports networking libraries from ABI 1.1 onward, negotiates optional
 functions, and returns Unsupported instead of calling an unknown JSON trap.
@@ -211,15 +250,42 @@ return. USB/serial ambiguity markers and CS1 pending-sequence state survive
 library unload independently of physical ownership. Successful validated USB/
 serial replies clear only their own exchange marker; cleanup does not clear an
 unresolved one. Ambiguous Open/Write/Close is never replayed automatically.
-There is no marker-clear button or general physical recovery guarantee. Stop
-on recovery-required errors, preserve both ends' errors/logs and establish
-physical teardown before considering a separately reviewed recovery procedure.
+ABI 1.5 adds idle-only `NioLibResetTransport` and Recovery capability `0x80`.
+NIO Config exposes it as **Reset**, with explicit confirmation:
+
+1. End NIO clients and return Home. Preserve the failed operation's errors;
+   clearing local state cannot undo an unknown remote side effect.
+2. For USB, release the host as needed, **physically disconnect/reconnect**
+   the cradle/device, and restart the host. The compatible host retires the old
+   owner on a fresh physical connection. UsbLibOpen alone does not prove this,
+   so a successful driver open does not clear ambiguity automatically.
+3. For serial, reset/restart the remote peer so its old sessions and buffered
+   replies are gone. For CS1, reset/reinitialize the module and remote host
+   ownership; do not clear the Palm marker while an old command remains live.
+4. Open NIO Config, select and Save the intended transport, tap **Reset**, then
+   confirm its peer/link has been reset. Cancel leaves the marker intact.
+   Reset clears only that transport's marker, sends no request, and refuses a
+   live client or driver resources that cannot safely be released.
+5. Start the host before **Test** or a client. A fresh Clock reply confirms
+   reuse. No automatic replay of the failed operation occurs.
+
+Use the public API, never edit private preferences directly. Failed preference
+verification reports a Palm error instead of successful recovery. A hard reset
+is not required by this procedure. Real soft-reset persistence and physical
+recovery still need the documented device acceptance tests; unsaved preferences
+must not be treated as permanent storage.
 
 ## Verification and limits
 
-[Testing and bench guidance](palmos-shared-testing.md) describes image/ABI audits,
-compiled m68k tests with mocked Palm traps, optional app fixtures and safe
-operator tools. These validate actual generated code, not full Palm OS behavior.
+[Testing guidance](palmos-shared-testing.md) describes image/ABI audits,
+compiled m68k tests with mocked Palm traps, optional app fixtures and physical
+acceptance steps. Automated tests validate generated code, not full Palm OS behavior.
+
+The current ABI 1.5 recovery changes and SDK 3.1-built artifacts have not been
+qualified on physical hardware. Linux builds and mocked execution tests pass;
+the user has independently confirmed the Palm build works. The Prism results
+below describe earlier revisions and do not verify the new Reset action,
+soft-reset marker persistence or the current host/library pairing.
 
 On a real Visor Prism, Linux USB Generic 2 passed Clock + two HTTP and
 ISS → Weather → ISS; switching to Springboard passed Clock + two HTTP again.

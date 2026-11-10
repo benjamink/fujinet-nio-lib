@@ -11,7 +11,8 @@ Err nl_hs_get(UInt16 card, UInt16 attr, void *value)
 uint16_t nl_original_exchange(const uint8_t *, uint16_t, uint8_t *, uint16_t, uint16_t *);
 
 /* This is an ownership tombstone, NOT a saved network session/configuration.
- * Unsaved preferences survive library unload and Palm soft reset. Publishing
+ * Unsaved preferences survive unload; soft-reset persistence is a hardware
+ * acceptance check, not assumed by the recovery API. Publishing
  * and read-back must succeed BEFORE the doorbell is physically posted. */
 #define PENDING_PREF 0x4e32
 #define PENDING_MAGIC 0x4e4c5031UL
@@ -89,6 +90,12 @@ UInt16 nl_cs1_pending(void)
 {
     Pending p;
     return !pending_get(&p) || p.sequence != 0;
+}
+Err nl_cs1_reset(void)
+{
+    if (!pending_set(0, 0)) return nioLibErrGlobals;
+    posted = ambiguous = 0;
+    return errNone;
 }
 
 UInt16 nl_bus_read(UInt32 address)

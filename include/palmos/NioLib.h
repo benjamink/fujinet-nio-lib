@@ -1,4 +1,4 @@
-/* Palm OS system-library ABI 1.4; original 1.0 traps stay unchanged. */
+/* Palm OS system-library ABI 1.5; original 1.0 traps stay unchanged. */
 #ifndef NIO_PALM_LIBRARY_H
 #define NIO_PALM_LIBRARY_H
 #include <PalmOS.h>
@@ -8,7 +8,7 @@
 #define nioTestCreator 'NiT1'
 #define nioLibType 'libr'
 #define nioLibAbiMajor 1
-#define nioLibAbiMinor 4
+#define nioLibAbiMinor 5
 #define nioLibCapA4Globals 0x00000001UL
 #define nioLibCapNetwork   0x00000002UL
 #define nioLibCapClock     0x00000004UL
@@ -16,6 +16,7 @@
 #define nioLibCapTransports 0x00000010UL
 #define nioLibCapUSB 0x00000020UL
 #define nioLibCapJSONQuery 0x00000040UL
+#define nioLibCapRecovery 0x00000080UL
 #define nioLibCapTestOnly  0x80000000UL
 /* Legacy bit/name retained: it now identifies the foundation diagnostics. */
 #define nioLibCapTestGlobals nioLibCapTestOnly
@@ -69,6 +70,8 @@ typedef struct {
 #define nioLibTrapSetConfig (sysLibTrapCustom + 15)
 #define nioLibTrapTransportStatus (sysLibTrapCustom + 16)
 #define nioLibTrapNetJsonQuery (sysLibTrapCustom + 17)
+#define nioLibTrapResetTransport (sysLibTrapCustom + 18)
+#define nioRecoveryPeerReset 1
 
 typedef struct {
     UInt16 size;
@@ -160,5 +163,11 @@ Err NioLibGetTransportStatus(UInt16 refNum, NioLibTransportStatus *statusP)
  * offset zero, do not repeat configuration (which could reset partial input). */
 Err NioLibNetJsonQuery(UInt16 refNum, UInt32 token, UInt16 handle,
                       const Char *selector, UInt16 *resultP) NIO_LIB_TRAP(nioLibTrapNetJsonQuery);
+/* ABI 1.5: idle-only local recovery, after the operator has reset the remote
+ * peer/link and retired its old handles. Never replays or guesses a handle.
+ * USB requires a physical reconnect; closing/opening UsbLib is insufficient.
+ * Confirmation must equal nioRecoveryPeerReset; transport is explicit. */
+Err NioLibResetTransport(UInt16 refNum, UInt16 transport, UInt16 confirmation)
+    NIO_LIB_TRAP(nioLibTrapResetTransport);
 #undef NIO_LIB_TRAP
 #endif

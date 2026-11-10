@@ -362,7 +362,7 @@ static Boolean handle(EventType *e)
     return false;
 }
 
-UInt32 PilotMain(UInt16 cmd, MemPtr pbp, UInt16 flags)
+UInt32 PilotMain(UInt16 cmd, NioPalmLaunchPtr pbp, UInt16 flags)
 {
     EventType event;
     FormType *form;

@@ -1,4 +1,5 @@
 /* Handspring-only raw packet backend. No serial alias, SLIP or HotSync. */
+#include <PalmOS.h>
 #include <UsbMgr.h>
 #include "private.h"
 #include "fn_internal.h"
@@ -10,7 +11,8 @@ static UInt8 usb_tx[1024];
 
 /* A USB timeout is NOT proof that the peer retired the old physical session.
  * Persist only ambiguity, independently of serial and CS1 ownership markers.
- * There is intentionally no automatic reset/clear recovery operation. */
+ * Recovery requires explicit confirmation of a physical reconnect. Merely
+ * opening the Palm driver cannot prove the host retired its previous owner. */
 UInt16 nl_usb_pending(void)
 {
     UInt16 marker = 0, size = sizeof(marker);
@@ -26,6 +28,11 @@ static Boolean mark(UInt16 value)
     return v == 1 && size == sizeof(check) && check == value;
 }
 UInt16 nl_usb_owned(void) { return usb_opened || usb_loaded; }
+Err nl_usb_reset(void)
+{
+    if (nl_usb_owned()) return nioLibErrBusy;
+    return mark(0) ? errNone : nioLibErrGlobals;
+}
 static Boolean handspring_usb(void)
 {
     UInt32 version = 0;
@@ -35,7 +42,13 @@ UInt16 nl_usb_available(void)
 {
     UInt16 ref;
     if (!handspring_usb()) return 0;
-    return SysLibFind(usb_name, &ref) == errNone;
+    if (SysLibFind(usb_name, &ref) == errNone) return 1;
+    /* Load only: do not open the cradle or consume another owner's reference.
+     * Remember our load so normal teardown can balance it, including failure. */
+    if (usb_loaded) return 1;
+    if (SysLibLoad(sysFileTLibrary, 'HsUs', &usb_ref)) return 0;
+    usb_loaded = 1;
+    return 1;
 }
 void nl_usb_close(void)
 {
@@ -57,9 +70,9 @@ UInt16 nl_usb_open(void)
     Err err;
     const UInt16 *table;
     if (!handspring_usb()) return FN_ERR_UNSUPPORTED;
-    if (usb_opened || usb_loaded || nl_usb_pending()) return FN_ERR_BUSY;
+    if (usb_opened || nl_usb_pending()) return FN_ERR_BUSY;
     usb_fault = 0;
-    err = SysLibFind(usb_name, &usb_ref);
+    err = usb_loaded ? errNone : SysLibFind(usb_name, &usb_ref);
     if (err) {
         err = SysLibLoad(sysFileTLibrary, 'HsUs', &usb_ref);
         if (err) return FN_ERR_NOT_FOUND;

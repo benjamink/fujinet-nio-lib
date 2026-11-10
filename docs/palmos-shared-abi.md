@@ -10,7 +10,7 @@ See the [shared-library guide](palmos-shared-library.md) for build and lifecycle
 | --- | --- |
 | Library database / type / creator | `NioLib` / `libr` / `NiL1` |
 | Diagnostic application / creator | `NioLibTest` / `NiT1` |
-| ABI major.minor / implementation | **1.4 / 7** |
+| ABI major.minor / implementation | **1.5 / 8** |
 | Scalar layout | Palm fixed-width UInt16/UInt32, native big-endian, 2-byte alignment |
 
 Find with `SysLibFind`, load with `SysLibLoad` if missing, query version and
@@ -30,6 +30,7 @@ ABI 1.0 foundation clients remain compatible but cannot use networking.
 | Transport configuration/status | `0x10` |
 | USB | `0x20` |
 | Cached JSON selector | `0x40` |
+| Confirmed idle transport recovery | `0x80` |
 | Foundation globals diagnostics (`TestOnly`, legacy `TestGlobals` alias) | `0x80000000` |
 
 The diagnostics bit describes retained test entry points; the library also
@@ -65,6 +66,7 @@ scalars are range-checked before narrowing to the common API.
 | `0xA814` | SetConfig |
 | `0xA815` | GetTransportStatus |
 | `0xA816` | NetJsonQuery |
+| `0xA817` | ResetTransport (ABI 1.5) |
 
 Direct service traps return Palm `Err` and a separate `FN_*` output. Balanced
 Close requires a remaining-count pointer; only a successful zero result permits
@@ -94,4 +96,14 @@ capacity, configuration flags and `FN_*` result. Supported does not mean availab
 passive inspection can report availability unknown. Probe's `modulePresent`
 is Springboard-specific. USB/serial unresolved-operation markers use separate
 **unsaved** NiL1 preferences 0x4e36/0x4e35, version 1; these are private recovery
-state, not configuration. Applications must never clear them to force a retry.
+state, not configuration. CS1 uses private unsaved marker 0x4e32. Applications
+must never edit these records to force a retry.
+
+`NioLibResetTransport(refNum, transport, confirmation)` requires an open library,
+ABI >=1.5 and capability `0x80`. Transport must be 1, 2 or 3; confirmation must
+equal `nioRecoveryPeerReset` (1), after the operator retired the peer's old
+handles and buffered replies. USB requires a physical reconnect. Active clients,
+backends or unreleasable driver resources cause Busy. Invalid arguments cause
+Param; failed marker write/read-back causes Globals. The trap clears only the
+specified marker, sends no packets and never replays a request. Follow the
+user guide's recovery procedure: clearing local state cannot undo side effects.

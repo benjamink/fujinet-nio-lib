@@ -4,11 +4,12 @@ OBJCOPY = m68k-palmos-objcopy
 BUILD_PRC = build-prc
 PILRC = pilrc
 PYTHON = python3
-B = build/palmos-shared-usb
+B = build/palmos-shared-$(PALMOS_SDK_VERSION)
 S = src/platform/palmos/shared
 T = examples/palmos-shared
-PALMFLAGS = -Wall -Werror -O2 -palmos3.5 -Iinclude/palmos
-HANDSPRING_INCLUDE ?= -I/handspring/Include
+include makefiles/palmos-sdk.mk
+PALMFLAGS = -Wall -Werror -O2 $(PALMOS_SDK_FLAGS) -Iinclude/palmos
+HANDSPRING_INCLUDE ?=
 SBNIO_ABI_INCLUDE ?= -I../fujinet-nio/bridges/rp2350-springboard/include
 LIBFLAGS = $(PALMFLAGS) -Iinclude $(SBNIO_ABI_INCLUDE) -mown-gp
 CORE = fn_state fn_init fn_shutdown fn_open fn_open_exchange fn_open_translated \
@@ -24,6 +25,13 @@ BACKOBJS = $(addprefix $(B)/backend/,$(addsuffix .o,$(BACKEND))) $(B)/backend/fn
 
 .PHONY: all verify
 all: verify
+
+# Header/flag changes must invalidate objects even when callers override B.
+.PHONY: FORCE
+$(B)/settings: FORCE | $(B)
+	@printf '%s\n' '$(CC) $(LIBFLAGS) $(HANDSPRING_INCLUDE)' > $@.tmp
+	@cmp -s $@.tmp $@ && rm $@.tmp || mv $@.tmp $@
+$(B)/entry.o $(B)/library.o $(B)/image.o $(B)/services.o $(B)/json.o $(B)/cs1.o $(B)/transport.o $(B)/serial.o $(B)/usb.o $(B)/test.o $(B)/registers.o $(B)/client.o $(COREOBJS) $(BACKOBJS): $(B)/settings $(wildcard include/palmos/*.h)
 
 $(B):
 	mkdir -p $@
@@ -42,7 +50,8 @@ $(B)/cs1.o: $(S)/cs1.c include/palmos/NioLib.h $(S)/private.h | $(B)
 $(B)/transport.o: $(S)/transport.c $(S)/private.h include/palmos/NioLib.h | $(B)
 	$(CC) $(LIBFLAGS) -c $< -o $@
 $(B)/usb.o: $(S)/usb.c $(S)/private.h include/palmos/NioLib.h | $(B)
-	$(CC) $(LIBFLAGS) $(HANDSPRING_INCLUDE) -c $< -o $@
+	@test -f "$(HANDSPRING_INCLUDE)/UsbMgr.h" || { echo 'Set HANDSPRING_INCLUDE to the directory containing UsbMgr.h (install the Handspring SDK through palmdev-toolchain/setup.sh).'; exit 1; }
+	$(CC) $(LIBFLAGS) -I"$(HANDSPRING_INCLUDE)" -c $< -o $@
 $(B)/serial.o: $(S)/serial.c $(S)/private.h include/palmos/NioLib.h | $(B)
 	$(CC) $(LIBFLAGS) -c $< -o $@
 $(B)/backend/transport_cs1.o: src/platform/palmos/fn_transport.c | $(B)

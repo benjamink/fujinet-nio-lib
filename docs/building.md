@@ -34,17 +34,24 @@ This document describes how to build the fujinet-nio-lib library for various pla
   ```
 
 ### For Palm OS builds:
-- [prc-tools-remix](https://github.com/jichu4n/prc-tools-remix)
-  (`m68k-palmos-gcc` 2.95.3, `m68k-palmos-ar`) and the Palm OS 3.5 SDK.
-  Its `tools/setup-palm-os-dev-env.sh` installs both on Debian; the Docker
-  image in `fujinet-palm/docker/` has them ready:
+- Install [palmdev-toolchain](https://github.com/mozzwald/palmdev-toolchain)
+  explicitly and run its `setup.sh`, selecting SDK 3.1 and optionally 3.5.
+  The shared USB library also requires the optional Handspring SDK.
+  The reviewed baseline is toolchain commit `4161cf9` (prc-tools-remix 2.3.6,
+  PilRC 3.2.91 and Python 3). SDKs remain local and are mounted read-only.
+  Equivalent native tools are also supported. See the
+  [shared-library build guide](palmos-shared-library.md#build).
 
   ```bash
-  ../fujinet-palm/docker/palm-build.sh make palmos-serial
+  make palmos-serial PALMOS_BUILDER=container
   ```
 - `sbnio.h` from a `fujinet-nio` checkout for `palmos-springboard`
   (`bridges/rp2350-springboard/include`), found as `../fujinet-nio` unless
   `SBNIO_ABI_INCLUDE` says otherwise; see [Palm OS Springboard](palmos/springboard.md)
+
+Palm tooling is checked only for Palm targets. Ordinary non-Palm builds do not
+require Docker, SDKs, or a toolchain checkout. `make check` intentionally builds
+all targets including Palm and therefore requires those dependencies.
 
 ## Building
 
@@ -156,15 +163,15 @@ fujinet-nio-lib/
     fujinet-nio-msdos-f5.lib     # MS-DOS FUJINET.SYS INT F5 backend
     fujinet-nio-amiga.a          # Amiga application library
     fujinet-nio-amiga-driver.a   # Amiga resident-driver library
-    fujinet-nio-palmos-serial.a  # Palm OS cradle serial library
-    fujinet-nio-palmos-springboard.a # Palm OS Springboard library
+    palmos-3.1/fujinet-nio-palmos-serial.a  # Palm OS cradle serial library
+    palmos-3.1/fujinet-nio-palmos-springboard.a # Palm OS Springboard library
 ```
 
 ## Palm OS
 
 For the installed multi-transport `NioLib.prc`, `NioLibTest.prc` and lightweight
 client archive, use the [shared-library build guide](palmos-shared-library.md#build).
-The targets below build separate static archives and remain unchanged.
+The targets below build separate static archives under SDK-specific directories.
 
 `make palmos-serial` builds for Palm OS 3.1 and later. It opens the cradle
 serial port with the New Serial Manager on Palm OS 3.3 and later, and with the

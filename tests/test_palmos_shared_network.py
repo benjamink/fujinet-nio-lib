@@ -72,7 +72,7 @@ class NetworkMachine(foundation.PalmMachine):
         self.stack_low = min(self.stack_low, uc.reg_read(UC_M68K_REG_A7))
         if bytes(uc.mem_read(pc, 2)) != b'\x4e\x4f': return
         trap, sp = self.read16(pc + 2), uc.reg_read(UC_M68K_REG_A7)
-        if 0xa801 <= trap <= 0xa816:
+        if 0xa801 <= trap <= 0xa817:
             target = self.read32(self.ENTRY) + struct.unpack('>h', uc.mem_read(
                 self.read32(self.ENTRY) + 2 * (trap - 0xa800), 2))[0]
             uc.mem_write(sp - 4, struct.pack('>I', pc + 4))

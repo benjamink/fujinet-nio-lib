@@ -29,6 +29,7 @@ NioLibDispatch:
     .word NioLibSetConfig - NioLibDispatch
     .word NioLibGetTransportStatus - NioLibDispatch
     .word NioLibNetJsonQuery - NioLibDispatch
+    .word NioLibResetTransport - NioLibDispatch
 NioLibName:
     .asciz "NioLib"
     .even

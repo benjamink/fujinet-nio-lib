@@ -42,6 +42,12 @@ endif
 # Output files
 LIBRARY     := $(BUILDDIR)/$(PROGRAM)-$(TARGET)$(LIBEXT)
 
+ifeq ($(COMPILER_FAMILY),prcgcc)
+OBJDIR := obj/palmos-$(PALMOS_SDK_VERSION)
+BUILDDIR := build/palmos-$(PALMOS_SDK_VERSION)
+LIBRARY := $(BUILDDIR)/$(PROGRAM)-$(TARGET)$(LIBEXT)
+endif
+
 ifeq ($(PLATFORM),atari)
 LIBRARY := $(BUILDDIR)/$(PROGRAM)-atari-$(ATARI_BACKEND)$(LIBEXT)
 endif
@@ -219,6 +225,9 @@ OBJECTS     := $(patsubst $(SRCDIR)/%,$(OBJDIR)/$(TARGET)/%,$(OBJECTS_C)) \
 
 # Rebuild when source selection or backend compiler flags change.
 $(OBJECTS): makefiles/build.mk makefiles/compiler.mk makefiles/targets.mk
+ifeq ($(COMPILER_FAMILY),prcgcc)
+$(OBJECTS): makefiles/compiler-prcgcc.mk makefiles/palmos-sdk.mk $(wildcard include/palmos/*.h)
+endif
 
 # Dependency files
 DEPENDS := $(OBJECTS:.o=.d)

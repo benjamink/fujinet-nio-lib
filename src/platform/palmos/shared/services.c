@@ -164,12 +164,14 @@ SERVICE(NioLibNetOpen,
         a->translationFlags > 255 || a->translated > 1) return nioLibErrParam;
     *handleP = FN_INVALID_HANDLE;
     err = enter(token); if (err) return err;
+    nl_clear_last_result();
     if (a->translated)
         *resultP = fn_open_translated(handleP, (uint8_t)a->method, a->url, (uint8_t)a->flags,
                     (uint8_t)a->translationType, (uint8_t)a->translationFlags, a->selector);
     else *resultP = fn_open(handleP, (uint8_t)a->method, a->url, (uint8_t)a->flags);
     /* A syntactically invalid Open response may hide a remote allocation. */
-    if (*resultP && nl_last_result() == SBN_RES_OK && _fn_parse_ctx.status == FN_OK)
+    if (*resultP && (nl_ambiguous() || nl_transport_pending() ||
+        (nl_last_result() == SBN_RES_OK && _fn_parse_ctx.status == FN_OK)))
         uncertain_operation = 1;
     leave(); return errNone;
 }
@@ -326,4 +328,22 @@ SERVICE(NioLibNetJsonQuery,
     err = enter(token); if (err) return err;
     *resultP = nl_json_query(handle, selector);
     leave(); return errNone;
+}
+
+SERVICE(NioLibResetTransport,
+        (UInt16 refNum, UInt16 transport, UInt16 confirmation),
+        (refNum, transport, confirmation))
+{
+    Err result;
+    (void)refNum;
+    if (confirmation != nioRecoveryPeerReset ||
+        (transport != nioTransportSpringboard && transport != nioTransportSerial &&
+         transport != nioTransportUSB)) return nioLibErrParam;
+    if (!nl_client_idle() || nl_active()) return nioLibErrBusy;
+    if (nl_can_close()) return nioLibErrBusy;
+    busy = 1;
+    result = nl_transport_reset(transport);
+    if (!result) uncertain_operation = 0;
+    busy = 0;
+    return result;
 }

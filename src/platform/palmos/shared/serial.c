@@ -1,7 +1,7 @@
 /* Palm shared-only adaptation of fn_channel_serial.c. The upstream static
  * channel is untouched. Common fn_stream_session_t and SLIP are reused. */
 #include <PalmOS.h>
-#include <SerialMgrOld.h>
+#include "NioSerialCompat.h"
 #include "private.h"
 #include "fn_session.h"
 #include "fn_slip.h"
@@ -25,7 +25,7 @@ static UInt32 ticks(UInt16 ms)
 /* Unlike CS1, raw serial has no sequence/epoch in the protocol. A possibly
  * executed packet cannot safely be matched after timeout, close or unload.
  * This unsaved marker blocks reuse until an external link/peer reset and an
- * explicit developer recovery. No automatic state-changing replay. */
+ * explicit operator-confirmed recovery. No automatic state-changing replay. */
 UInt16 nl_serial_pending(void)
 {
     UInt32 marker = 0;
@@ -42,6 +42,11 @@ static Boolean marker_set(UInt32 value)
     PrefSetAppPreferences(nioLibCreator, SERIAL_PREF, 1, &value, sizeof(value), false);
     version = PrefGetAppPreferences(nioLibCreator, SERIAL_PREF, &check, &size, false);
     return version == 1 && size == sizeof(check) && check == value;
+}
+Err nl_serial_reset(void)
+{
+    if (nl_serial_owned()) return nioLibErrBusy;
+    return marker_set(0) ? errNone : nioLibErrGlobals;
 }
 static void clear_error(void)
 {

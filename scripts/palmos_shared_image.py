@@ -129,6 +129,8 @@ def audit(out, objdump='m68k-palmos-objdump', nm='m68k-palmos-nm'):
         names += ["NioLibGetConfig", "NioLibSetConfig", "NioLibGetTransportStatus"]
     if "NioLibNetJsonQuery" in sym:
         names += ["NioLibNetJsonQuery"]
+    if "NioLibResetTransport" in sym:
+        names += ["NioLibResetTransport"]
     for i, name in enumerate(names):
         offset, = struct.unpack_from('>h', code, table + 2 * i)
         if table + offset != sym[name]:

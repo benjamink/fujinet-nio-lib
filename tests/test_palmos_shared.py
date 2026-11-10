@@ -15,7 +15,7 @@ import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-OUT = Path(os.environ.get('PALMOS_SHARED_BUILD', ROOT / 'build/palmos-shared-usb'))
+OUT = Path(os.environ.get('PALMOS_SHARED_BUILD', ROOT / 'build/palmos-shared-3.1'))
 spec = importlib.util.spec_from_file_location('image', ROOT / 'scripts/palmos_shared_image.py')
 image = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(image)
@@ -292,6 +292,7 @@ class CompiledM68KTests(unittest.TestCase):
         if 'NioLibGetConfig' in m.symbols: version = (8, 1, 2, 4)
         if 'nl_usb_open' in m.symbols: version = (8, 1, 3, 6)
         if 'NioLibNetJsonQuery' in m.symbols: version = (8, 1, 4, 7)
+        if 'NioLibResetTransport' in m.symbols: version = (8, 1, 5, 8)
         self.assertEqual(struct.unpack('>4H', m.uc.mem_read(0x8000, 8)), version)
         self.assertEqual(m.globals, 0)
         self.assertFalse(m.allocations)
@@ -302,6 +303,7 @@ class CompiledM68KTests(unittest.TestCase):
         if 'NioLibGetConfig' in m.symbols: caps = 0x8000001f
         if 'nl_usb_open' in m.symbols: caps = 0x8000003f
         if 'NioLibNetJsonQuery' in m.symbols: caps = 0x8000007f
+        if 'NioLibResetTransport' in m.symbols: caps = 0x800000ff
         self.assertEqual(m.read32(0x8000), caps)
 
     def test_rejected_resource_leaves_no_allocations_or_locks(self):

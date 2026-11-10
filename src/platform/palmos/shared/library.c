@@ -26,7 +26,7 @@ static Err globals_test(UInt16 refNum, UInt32 delta, NioLibGlobalsResult *r)
 Err NioLibInstall(UInt16 refNum, SysLibTblEntryPtr entry)
 {
     (void)refNum;
-    entry->dispatchTblP = (MemPtr *)&NioLibDispatch;
+    entry->dispatchTblP = (void *)&NioLibDispatch;
     entry->globalsP = NULL;
     return errNone;
 }
@@ -136,7 +136,7 @@ Err NioLibGetVersion(UInt16 refNum, NioLibVersion *v)
     (void)refNum;
     if (!v || v->size != sizeof(*v)) return nioLibErrParam;
     v->abiMajor = nioLibAbiMajor; v->abiMinor = nioLibAbiMinor;
-    v->implementation = 7;
+    v->implementation = 8;
     return errNone;
 }
 
@@ -145,7 +145,7 @@ Err NioLibGetCapabilities(UInt16 refNum, UInt32 *capsP)
     (void)refNum;
     if (!capsP) return nioLibErrParam;
     *capsP = nioLibCapA4Globals | nioLibCapTestOnly | nioLibCapNetwork |
-             nioLibCapClock | nioLibCapClient | nioLibCapTransports | nioLibCapUSB | nioLibCapJSONQuery;
+             nioLibCapClock | nioLibCapClient | nioLibCapTransports | nioLibCapUSB | nioLibCapJSONQuery | nioLibCapRecovery;
     return errNone;
 }
 
