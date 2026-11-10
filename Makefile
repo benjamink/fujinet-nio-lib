@@ -16,6 +16,7 @@
 # TARGETS = atari apple2 apple2enh bbc c64 coco msdos linux
 TARGETS = atari bbc bbc-clib c64 msdos-serial msdos-ioctl msdos-f5 linux amiga
 EXTRA_TARGETS = amiga-driver palmos-serial palmos-springboard
+PALMOS_TARGETS = palmos-serial palmos-springboard
 
 # Output library name
 override PROGRAM := fujinet-nio
@@ -25,7 +26,7 @@ override PROGRAM := fujinet-nio
 	test-appstore-read test-list-pages test-slot-catalog test-bbc test-bbc-scripted \
 	test-bbc-real test-fuji test-wifi test-disk test-disk-context test-session test-stream-wake test-open-ext test-open-wire test-ready-wire test-write-partial test-library-link \
 	test-amiga-transport test-c64-transport test-palmos-transport test-atari-transport test-atari-hsio test-atari-proc test-atari-read-profile test-atari-list-pages test-atari-appkey-uri test-atari-parse-read test-atari-client-buffers test-atari-network-read test-atari-network-write test-atari-network-open test-atari-compact test-raw-transport-retry test \
-	test-all-build check msdos $(TARGETS) $(EXTRA_TARGETS)
+	test-all-build check check-palmos msdos $(TARGETS) $(EXTRA_TARGETS)
 
 # Default target: build all
 all:
@@ -49,7 +50,8 @@ PALMOS_SHARED_PYTHON ?= python3
 PALMOS_SDK_VERSION ?= 3.1
 PALMOS_SHARED_BUILD ?= build/palmos-shared-$(PALMOS_SDK_VERSION)
 PALMOS_BUILDER ?= auto
-PALMDEV_TOOLCHAIN ?= $(abspath ../palmdev-toolchain)
+# In the NIO workspace the toolchain is the opt-in submodule external/palmdev-toolchain.
+PALMDEV_TOOLCHAIN ?= $(if $(NIO_WORKSPACE),$(NIO_WORKSPACE)/external/palmdev-toolchain,$(abspath ../palmdev-toolchain))
 export PALMOS_SDK_VERSION PALMOS_BUILDER PALMDEV_TOOLCHAIN
 palmos-shared:
 	bash scripts/palmos-build.sh $(MAKE) -f makefiles/palmos-shared.mk B=$(PALMOS_SHARED_BUILD) $(if $(SBNIO_ABI_INCLUDE),SBNIO_ABI_INCLUDE="$(SBNIO_ABI_INCLUDE)") $(if $(HANDSPRING_INCLUDE),HANDSPRING_INCLUDE="$(HANDSPRING_INCLUDE)")
@@ -58,7 +60,6 @@ test-palmos-shared:
 	PALMOS_SHARED_BUILD=$(PALMOS_SHARED_BUILD) $(PALMOS_SHARED_PYTHON) scripts/palmos_test_preflight.py
 	PALMOS_SHARED_BUILD=$(PALMOS_SHARED_BUILD) $(PALMOS_SHARED_PYTHON) -m unittest discover -s tests -p 'test_palmos_shared*.py' -v
 
-test: test-palmos-shared
 
 .PHONY: test-palmos-build
 test-palmos-build:
@@ -279,13 +280,27 @@ test: test-u1mb-clear test-library-link test-legacy test-mount-resolve test-apps
 check:
 	@echo "Running fast all-target library check..."
 	$(MAKE) all
-	@for target in $(EXTRA_TARGETS); do \
+	@for target in $(filter-out $(PALMOS_TARGETS),$(EXTRA_TARGETS)); do \
 		echo ""; \
 		echo "Building extra target $$target..."; \
 		$(MAKE) $$target || exit 1; \
 	done
-	$(MAKE) palmos-shared
 	$(MAKE) test
+
+# Palm OS check, kept apart from `check` so the general check needs no Palm
+# toolchain: Palm static libraries, the NioLib shared library, and its m68k
+# execution tests (need palmdev-toolchain or native prc-tools, the Palm SDK and
+# tests/requirements-palmos-shared.txt; see docs/building.md).
+.PHONY: check-palmos
+check-palmos:
+	@echo "Running Palm OS check..."
+	@for target in $(PALMOS_TARGETS); do \
+		echo ""; \
+		echo "Building Palm target $$target..."; \
+		$(MAKE) $$target || exit 1; \
+	done
+	$(MAKE) palmos-shared
+	$(MAKE) test-palmos-shared
 
 # Help
 help:
@@ -307,6 +322,7 @@ help:
 	@echo "  make test-stream-wake - Run stream transport idle-reclaim tests"
 	@echo "  make test-palmos-transport - Run Palm OS Springboard client host tests"
 	@echo "  make palmos-shared - Build NioLib.prc and NioLibTest.prc (prc-tools)"
+	@echo "  make check-palmos - Palm OS targets, NioLib and its m68k tests (needs the Palm toolchain)"
 	@echo "  make test-palmos-shared - Require shared-library images and m68k execution"
 	@echo "  make test-all-build - Build all configured library targets"
 	@echo "  make check - Build all targets and run the fast host-side test suite"

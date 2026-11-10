@@ -50,8 +50,11 @@ This document describes how to build the fujinet-nio-lib library for various pla
   `SBNIO_ABI_INCLUDE` says otherwise; see [Palm OS Springboard](palmos/springboard.md)
 
 Palm tooling is checked only for Palm targets. Ordinary non-Palm builds do not
-require Docker, SDKs, or a toolchain checkout. `make check` intentionally builds
-all targets including Palm and therefore requires those dependencies.
+require Docker, SDKs, or a toolchain checkout, and neither does `make check`.
+Run `make check-palmos` for the Palm targets, the NioLib shared library and its
+m68k execution tests; it needs the toolchain above plus
+`tests/requirements-palmos-shared.txt`. In the NIO workspace the toolchain is the
+opt-in submodule `external/palmdev-toolchain`; see the workspace README.
 
 ## Building
 

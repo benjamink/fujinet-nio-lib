@@ -4,7 +4,8 @@ set -euo pipefail
 root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 sdk=${PALMOS_SDK_VERSION:-3.1}
 backend=${PALMOS_BUILDER:-auto}
-toolchain=${PALMDEV_TOOLCHAIN:-$root/../palmdev-toolchain}
+toolchain=${PALMDEV_TOOLCHAIN:-${NIO_WORKSPACE:+$NIO_WORKSPACE/external/palmdev-toolchain}}
+toolchain=${toolchain:-$root/../palmdev-toolchain}
 case "$sdk" in 3.1|3.5) ;; *) echo 'PALMOS_SDK_VERSION must be 3.1 or 3.5' >&2; exit 2 ;; esac
 case "$backend" in auto|native|container) ;; *) echo 'PALMOS_BUILDER must be auto, native, or container' >&2; exit 2 ;; esac
 native=1
@@ -20,6 +21,7 @@ if [ ! -x "$toolchain/palm-build" ]; then
     cat >&2 <<EOF
 Palm build tools are unavailable. Install palmdev-toolchain explicitly:
   git clone https://github.com/mozzwald/palmdev-toolchain "$toolchain"
+  (in the NIO workspace: git submodule update --init external/palmdev-toolchain)
   cd "$toolchain" && ./setup.sh
 Select SDK $sdk and the Handspring SDK for the shared USB library.
 Then retry, or set PALMDEV_TOOLCHAIN to an existing checkout.

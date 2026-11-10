@@ -52,6 +52,8 @@ The toolchain installer currently obtains its pinned Handspring SDK from
 agreement acceptance; it does not download the PalmDB archive. The required
 layout is `Include/UsbMgr.h`. The wrapper exports `HANDSPRING_INCLUDE` as the
 read-only container directory `/toolchain/.local/sdk/handspring/Include`.
+Known risk, accepted by the maintainer: that mirror redistributes an SDK whose EULA
+forbids it; the publisher no longer exists to object. NioLib itself never ships it.
 
 From this library checkout:
 
