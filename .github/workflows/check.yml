@@ -68,6 +68,22 @@ jobs:
           ref: ${{ steps.clib.outputs.sha }}
           path: ${{ env.WORKSPACE_DIR }}/repos/cc65-clib
 
+      # The Palm Springboard transport host test includes sbnio.h, the firmware's
+      # register ABI, from fujinet-nio's bridges/ directory.
+      - name: Resolve fujinet-nio revision
+        id: nio
+        run: echo "sha=$(git -C "$WORKSPACE_DIR" rev-parse HEAD:repos/fujinet-nio)" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout fujinet-nio (bridges only)
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          repository: fujinet-nio/fujinet-nio
+          ref: ${{ steps.nio.outputs.sha }}
+          path: ${{ env.WORKSPACE_DIR }}/repos/fujinet-nio
+          sparse-checkout: bridges
+          submodules: false
+
       - name: Install system dependencies
         run: |
           sudo apt-get update
