@@ -90,6 +90,26 @@ jobs:
           done
           /opt/amiga/bin/m68k-amigaos-gcc --version
 
+      # The classic Mac build uses Retro68's m68k-apple-macos-gcc. Its image is
+      # the toolchain, so each tool is a wrapper that runs in it, as above.
+      - name: Install Retro68
+        env:
+          RETRO68_IMAGE: ghcr.io/autc04/retro68@sha256:dd923969100f408943f73c9618b3c7628686aae819583eecb0ddd1837da6943c
+        run: |
+          docker pull --platform linux/amd64 "$RETRO68_IMAGE"
+          mkdir -p "$HOME/retro68/bin"
+          for tool in gcc ar as; do
+            cat > "$HOME/retro68/bin/m68k-apple-macos-$tool" <<WRAPPER
+          #!/bin/sh
+          exec docker run --rm -i --platform linux/amd64 -u "\$(id -u):\$(id -g)" \\
+            -v "\$HOME:\$HOME" -v /tmp:/tmp -w "\$PWD" "$RETRO68_IMAGE" \\
+            /Retro68-build/toolchain/bin/m68k-apple-macos-$tool "\$@"
+          WRAPPER
+            chmod +x "$HOME/retro68/bin/m68k-apple-macos-$tool"
+          done
+          echo "$HOME/retro68/bin" >> "$GITHUB_PATH"
+          "$HOME/retro68/bin/m68k-apple-macos-gcc" --version
+
       # The Atari tests run on the soft65c02 emulator. Pinned so the tests do
       # not change with upstream heads.
       - name: Cache soft65c02_unit
