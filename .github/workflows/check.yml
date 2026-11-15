@@ -54,6 +54,20 @@ jobs:
           ref: bbc-clib
           path: ${{ env.WORKSPACE_DIR }}/repos/cc65
 
+      # The soft65c02 tests read cc65-clib's test harness. Use the revision the
+      # workspace pins.
+      - name: Resolve cc65-clib revision
+        id: clib
+        run: echo "sha=$(git -C "$WORKSPACE_DIR" rev-parse HEAD:repos/cc65-clib)" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout cc65-clib
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          repository: fujinet-nio/cc65-clib
+          ref: ${{ steps.clib.outputs.sha }}
+          path: ${{ env.WORKSPACE_DIR }}/repos/cc65-clib
+
       - name: Install system dependencies
         run: |
           sudo apt-get update
