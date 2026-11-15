@@ -126,18 +126,21 @@ jobs:
 
       # The Atari tests run on the soft65c02 emulator. Pinned so the tests do
       # not change with upstream heads.
-      - name: Cache soft65c02_unit
+      - name: Cache soft65c02
         id: soft65c02
         uses: actions/cache@v4
         with:
-          path: ~/.cargo/bin/soft65c02_unit
-          key: soft65c02_unit-fe4c233a
+          path: |
+            ~/.cargo/bin/soft65c02_unit
+            ~/.cargo/bin/soft65c02_tester
+          key: soft65c02-fe4c233a
 
-      - name: Install soft65c02_unit
+      # soft65c02_unit runs soft65c02_tester, so both are installed.
+      - name: Install soft65c02_unit and soft65c02_tester
         if: steps.soft65c02.outputs.cache-hit != 'true'
         run: |
           cargo install --locked --git https://github.com/markjfisher/soft65c02 \
-            --rev fe4c233a08316003b9716a3ee0f74a7a091ce25c soft65c02_unit
+            --rev fe4c233a08316003b9716a3ee0f74a7a091ce25c soft65c02_unit soft65c02_tester
 
       - name: make check
         working-directory: ${{ env.WORKSPACE_DIR }}/repos/fujinet-nio-lib
