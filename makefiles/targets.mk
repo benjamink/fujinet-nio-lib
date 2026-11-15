@@ -21,6 +21,7 @@ PLATFORM_amiga      := amiga
 PLATFORM_amiga-driver := amiga
 PLATFORM_palmos-serial := palmos
 PLATFORM_palmos-springboard := palmos
+PLATFORM_mac68k     := mac68k
 
 # Get platform for current target
 PLATFORM := $(PLATFORM_$(TARGET))
@@ -44,6 +45,7 @@ COMPILER_FAMILY_amiga      := amigagcc
 COMPILER_FAMILY_amiga-driver := amigagcc
 COMPILER_FAMILY_palmos-serial := prcgcc
 COMPILER_FAMILY_palmos-springboard := prcgcc
+COMPILER_FAMILY_mac68k     := macgcc
 
 # Get compiler family for current target
 COMPILER_FAMILY := $(COMPILER_FAMILY_$(TARGET))
@@ -149,6 +151,11 @@ TARGET_CFLAGS_palmos-springboard  := -Iinclude/palmos $(SBNIO_ABI_INCLUDE)
 TARGET_ASFLAGS_palmos-springboard :=
 # Everything in src/platform/palmos but the cradle serial channel.
 TARGET_PLATFORM_SRCS_palmos-springboard := $(filter-out src/platform/palmos/fn_channel_serial.c,$(wildcard src/platform/palmos/*.c))
+# Classic Macintosh 68k (Retro68). The transport is block I/O to the
+# FujiNet's HD20 mailbox through the ROM .Sony driver; see
+# src/platform/mac68k/fn_transport.c.
+TARGET_CFLAGS_mac68k    := -mcpu=68000
+TARGET_ASFLAGS_mac68k   :=
 
 # Get flags for current target
 TARGET_CFLAGS  := $(TARGET_CFLAGS_$(TARGET))

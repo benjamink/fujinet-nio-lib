@@ -33,6 +33,24 @@ This document describes how to build the fujinet-nio-lib library for various pla
   export PATH=/opt/amiga/bin:$PATH
   ```
 
+### For classic Macintosh builds:
+- [Retro68](https://github.com/autc04/Retro68), built, with its `toolchain/bin` on
+  `PATH` (`m68k-apple-macos-gcc`, `m68k-apple-macos-ar`):
+
+  ```bash
+  export PATH=$RETRO68_BUILD/toolchain/bin:$PATH
+  ```
+- Or its Docker image instead, which needs no Apple files, because it uses the
+  open-source multiversal interfaces. From the repository root:
+
+  ```bash
+  docker run --rm -u $(id -u):$(id -g) -e HOME=/tmp --entrypoint /bin/bash \
+    -v "$PWD":/work -w /work ghcr.io/autc04/retro68 \
+    -c 'export PATH=/Retro68-build/toolchain/bin:$PATH; make mac68k'
+  ```
+
+`mac68k` is in `EXTRA_TARGETS`, so `make check` builds it and needs Retro68 too.
+
 ### For Palm OS builds:
 - Install [palmdev-toolchain](https://github.com/mozzwald/palmdev-toolchain)
   explicitly and run its `setup.sh`, selecting SDK 3.1 and optionally 3.5.
@@ -78,6 +96,7 @@ make amiga      # Amiga application archive
 make amiga-driver # Resident-driver archive (no application atexit cleanup)
 make palmos-serial # Palm OS 3.1+ cradle serial port
 make palmos-springboard # Palm OS Springboard CS1 link
+make mac68k     # classic 68k Macintosh, HD20 mailbox (Retro68)
 ```
 
 ### Clean build artifacts:
@@ -170,6 +189,7 @@ fujinet-nio-lib/
     fujinet-nio-amiga-driver.a   # Amiga resident-driver library
     palmos-3.1/fujinet-nio-palmos-serial.a  # Palm OS cradle serial library
     palmos-3.1/fujinet-nio-palmos-springboard.a # Palm OS Springboard library
+    fujinet-nio-mac68k.a         # classic Macintosh library (HD20 mailbox)
 ```
 
 ## Palm OS
@@ -218,6 +238,15 @@ default `make` loop does not, because it needs prc-tools and `sbnio.h` from
 where the header lives. Applications also add `-Iinclude/palmos` for the
 `stdint.h` and `string.h` that prc-tools lacks. See
 [Palm OS Springboard](palmos/springboard.md).
+
+## Classic Macintosh
+
+`make mac68k` builds `build/fujinet-nio-mac68k.a` with Retro68 for the 68000, so it runs on
+any Mac whose ROM drives HD20s: the 512Ke, Plus, SE and later. Like `amiga-driver` it is in
+`EXTRA_TARGETS`, built by `make check` but not by the default `make` loop. Its transport
+needs no extra library: the Toolbox calls it makes compile to inline traps.
+`make test-mac68k-transport` runs the transport on the host against a fake drive queue and
+controller. See [the HD20 mailbox contract](mac68k/hd20-mailbox.md).
 
 ## Linux Native Testing
 
@@ -276,6 +305,7 @@ Platform-specific transport code is located in:
 - `src/platform/amiga/` - Amiga `fujinet-nio.device` broker client
 - `src/platform/palmos/` - Palm OS: the cradle serial port (New Serial Manager, or the serial library before Palm OS 3.3) and the Springboard CS1 link client
 - `include/palmos/` - `stdint.h` and `string.h` for prc-tools
+- `src/platform/mac68k/` - classic Macintosh: the HD20 mailbox on the floppy port
 
 See [Transport Backends](transport-backends.md) for how library build targets map
 to `fujinet-nio` transports/channels, and how future MS-DOS parallel or BBC

@@ -11,8 +11,8 @@ communicate with FujiNet NIO devices. It provides:
 
 - **Handle-based API** - Simple, intuitive session management
 - **FujiBus protocol** - Binary protocol with shared packet/checksum handling
-- **Multi-platform support** - Atari, BBC, Commodore 64, MS-DOS, Amiga, Palm OS, and Linux
-- **Multi-compiler support** - CC65, Open Watcom, GCC, amiga-gcc, and prc-tools
+- **Multi-platform support** - Atari, BBC, Commodore 64, MS-DOS, Amiga, Palm OS, classic Macintosh, and Linux
+- **Multi-compiler support** - CC65, Open Watcom, GCC, amiga-gcc, prc-tools, and Retro68
 - **HTTP and TCP/TLS** - All protocols supported
 
 ## Features
@@ -35,6 +35,7 @@ communicate with FujiNet NIO devices. It provides:
 - **[Transport Backends](docs/transport-backends.md)** - How platform library targets map to NIO channels
 - **[Palm OS Springboard](docs/palmos/springboard.md)** - Handspring Visor over a Springboard module's CS1 link
 - **[Installed Palm NioLib](docs/palmos-shared-library.md)** — One system library for CS1, serial and Handspring USB, with a lightweight application client
+- **[Classic Macintosh HD20 mailbox](docs/mac68k/hd20-mailbox.md)** - A 68000 Mac to the FujiNet Mac board through its floppy port
 - **[Examples](examples/README.md)** - Example applications and usage
 
 The legacy appkey compatibility functions are available via
@@ -69,6 +70,9 @@ make amiga-driver
 # Build the Palm OS (Handspring Springboard) library; needs prc-tools and
 # sbnio.h from fujinet-nio (see docs/palmos/springboard.md)
 make palmos-springboard
+
+# Build the classic Macintosh library; needs Retro68 (see docs/building.md)
+make mac68k
 ```
 
 ### Basic HTTP GET
@@ -195,6 +199,7 @@ int main(void) {
 | Amiga resident driver | `fujinet-nio.device` broker | amiga-gcc | ✅ Working |
 | Palm OS static archives | Springboard CS1 or serial | prc-tools | Implemented; serial hardware unqualified |
 | Palm OS installed NioLib | Runtime CS1 / serial / Handspring USB selection | prc-tools | CS1 and Linux USB tested on Visor Prism; serial hardware unqualified |
+| Classic Macintosh (68000 and up) | HD20 mailbox on the floppy port | Retro68 | Implemented; host-tested, not yet run on a Mac |
 
 ## Differences from fujinet-lib
 

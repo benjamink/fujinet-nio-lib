@@ -32,8 +32,8 @@ endif
 # Platform-specific source directory
 PLATFORM_DIR := $(SRCDIR)/platform/$(PLATFORM)
 
-# Library extension (GCC/amigagcc/prcgcc use .a, CC65 uses .lib)
-ifneq (,$(filter $(COMPILER_FAMILY),gcc amigagcc prcgcc))
+# Library extension (GCC/amigagcc/prcgcc/macgcc use .a, CC65 uses .lib)
+ifneq (,$(filter $(COMPILER_FAMILY),gcc amigagcc prcgcc macgcc))
     LIBEXT := .a
 else
     LIBEXT := .lib
@@ -278,7 +278,7 @@ $(OBJDIR)/$(TARGET)/platform/$(PLATFORM)/%.o: $(SRCDIR)/platform/$(PLATFORM)/%.s
 	$(CC) -t $(CC65_TARGET) -c $(ASFLAGS) --listing $(@:.o=.lst) -o $@ $<
 
 # Compile C files
-ifneq (,$(filter $(COMPILER_FAMILY),gcc amigagcc))
+ifneq (,$(filter $(COMPILER_FAMILY),gcc amigagcc macgcc))
 # GCC / amiga-gcc compilation
 $(OBJDIR)/$(TARGET)/common/%.o: $(SRCDIR)/common/%.c | $(OBJDIR)/$(TARGET)/common
 	@echo "  CC $<"
@@ -337,7 +337,7 @@ $(OBJDIR)/$(TARGET)/platform/$(PLATFORM)/%.o: $(SRCDIR)/platform/$(PLATFORM)/%.c
 endif
 
 # Create library
-ifneq (,$(filter $(COMPILER_FAMILY),gcc amigagcc prcgcc))
+ifneq (,$(filter $(COMPILER_FAMILY),gcc amigagcc prcgcc macgcc))
 $(LIBRARY): $(OBJECTS) | $(BUILDDIR)
 	@echo "  AR $@"
 	$(AR) rcs $@ $(OBJECTS)

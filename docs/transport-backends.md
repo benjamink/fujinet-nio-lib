@@ -57,6 +57,7 @@ driver ABI.
 | `palmos-serial` | common stream transport over the Palm OS cradle serial port | New Serial Manager at 115200 baud, or the serial library before Palm OS 3.3. Reclaims the line after an idle spell (`FN_STREAM_WAKE_IDLE_MS`) because NIO may lend it to HotSync. |
 | `palmos-springboard` | Springboard module CS1 link | Packet-native; the module firmware owns the link to NIO. |
 | `palmos-shared` | Installed Palm system library with runtime CS1/serial/USB selection | One common core; raw packets for CS1/HsUs USB, SLIP for serial. |
+| `mac68k` | HD20 mailbox on the classic Mac's floppy port | Packet-native: raw FujiBus packets through block I/O to the FujiNet Mac board, in the ROM's `.Sony` driver. |
 
 ## Atari SIO Backend Notes
 
@@ -158,6 +159,21 @@ Two limits to know about:
   Each exchange clears it first and leaves the transport's own result in it. A
   program that also does KERNAL file I/O must read `ST` before calling the library,
   not after.
+
+## Classic Macintosh HD20 Backend Notes
+
+The `mac68k` target is for any 68000 Mac whose ROM drives HD20s (512Ke, Plus, SE and
+later). The FujiNet Mac board presents its disks as HD20 units on the floppy port, each 16
+blocks longer than its image. Those 16 blocks are a mailbox: the library writes one raw
+FujiBus packet into them, with a 16-byte header, and reads the response back from them.
+The board's controller carries the packet to NIO. That is all ordinary driver-level block
+I/O through the ROM's `.Sony` driver, so a program needs no INIT, driver or hardware
+access.
+
+The header, the states and sequence numbers, the largest packet (8176 bytes) and the
+timing are in [the HD20 mailbox contract](mac68k/hd20-mailbox.md). A request waits up to
+35 seconds for its response (`FN_MAC_TIMEOUT_TICKS`), and only the HD20 units are probed
+for the mailbox, never a SCSI disk or a floppy.
 
 ## MS-DOS Backends
 

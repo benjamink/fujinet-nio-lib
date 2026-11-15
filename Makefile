@@ -8,6 +8,7 @@
 #   make bbc        - Build for BBC B
 #   make bbc-clib   - Build for BBC B with clib ROM
 #   make c64        - Build for Commodore 64
+#   make mac68k     - Build for the classic 68k Macintosh (Retro68)
 #   make linux      - build for linux/posix environment
 #   make clean      - Remove build artifacts
 #   make help       - Show this help
@@ -15,7 +16,7 @@
 # Supported targets
 # TARGETS = atari apple2 apple2enh bbc c64 coco msdos linux
 TARGETS = atari bbc bbc-clib c64 msdos-serial msdos-ioctl msdos-f5 linux amiga
-EXTRA_TARGETS = amiga-driver palmos-serial palmos-springboard
+EXTRA_TARGETS = amiga-driver palmos-serial palmos-springboard mac68k
 PALMOS_TARGETS = palmos-serial palmos-springboard
 
 # Output library name
@@ -25,7 +26,7 @@ override PROGRAM := fujinet-nio
 .PHONY: all clean help disk-bbc disk-bbc-clib test-legacy test-mount-resolve \
 	test-appstore-read test-list-pages test-slot-catalog test-bbc test-bbc-scripted \
 	test-bbc-real test-fuji test-wifi test-disk test-disk-context test-session test-stream-wake test-open-ext test-open-wire test-ready-wire test-write-partial test-library-link \
-	test-amiga-transport test-c64-transport test-palmos-transport test-atari-transport test-atari-hsio test-atari-proc test-atari-read-profile test-atari-list-pages test-atari-appkey-uri test-atari-parse-read test-atari-client-buffers test-atari-network-read test-atari-network-write test-atari-network-open test-atari-compact test-raw-transport-retry test \
+	test-amiga-transport test-c64-transport test-palmos-transport test-mac68k-transport test-atari-transport test-atari-hsio test-atari-proc test-atari-read-profile test-atari-list-pages test-atari-appkey-uri test-atari-parse-read test-atari-client-buffers test-atari-network-read test-atari-network-write test-atari-network-open test-atari-compact test-raw-transport-retry test \
 	test-all-build check check-palmos msdos $(TARGETS) $(EXTRA_TARGETS)
 
 # Default target: build all
@@ -249,6 +250,10 @@ test-c64-transport:
 	@echo "Running C64 IEC transport host test..."
 	bash ./tests/run_c64_transport_host_test.sh
 
+test-mac68k-transport:
+	@echo "Running classic Macintosh HD20 mailbox transport host test..."
+	bash ./tests/run_mac68k_transport_host_test.sh
+
 test-raw-transport-retry:
 	@echo "Running raw-call transport replay guard..."
 	bash ./tests/run_raw_transport_retry_test.sh
@@ -271,7 +276,7 @@ test-release:
 
 test: test-fuji-hsio test-package-atari test-release
 
-test: test-u1mb-clear test-library-link test-legacy test-mount-resolve test-appstore-read test-list-pages test-atari-list-pages test-atari-appkey-uri test-atari-parse-read test-atari-client-buffers test-atari-network-read test-atari-network-write test-atari-network-open test-slot-catalog test-fuji test-wifi test-disk test-disk-context test-session test-stream-wake test-open-ext test-open-wire test-ready-wire test-large-read test-write-partial test-amiga-transport test-c64-transport test-palmos-transport test-atari-transport test-atari-hsio test-atari-proc test-atari-read-profile test-atari-compact test-raw-transport-retry
+test: test-u1mb-clear test-library-link test-legacy test-mount-resolve test-appstore-read test-list-pages test-atari-list-pages test-atari-appkey-uri test-atari-parse-read test-atari-client-buffers test-atari-network-read test-atari-network-write test-atari-network-open test-slot-catalog test-fuji test-wifi test-disk test-disk-context test-session test-stream-wake test-open-ext test-open-wire test-ready-wire test-large-read test-write-partial test-amiga-transport test-c64-transport test-palmos-transport test-mac68k-transport test-atari-transport test-atari-hsio test-atari-proc test-atari-read-profile test-atari-compact test-raw-transport-retry
 
 # Fast required change check: compile every configured target, then run the
 # host-side tests and public archive-link test. Keep this as a recipe rather
@@ -321,6 +326,7 @@ help:
 	@echo "  make test-amiga-transport - Run Amiga broker-client host tests"
 	@echo "  make test-stream-wake - Run stream transport idle-reclaim tests"
 	@echo "  make test-palmos-transport - Run Palm OS Springboard client host tests"
+	@echo "  make test-mac68k-transport - Run classic Macintosh HD20 mailbox host tests"
 	@echo "  make palmos-shared - Build NioLib.prc and NioLibTest.prc (prc-tools)"
 	@echo "  make check-palmos - Palm OS targets, NioLib and its m68k tests (needs the Palm toolchain)"
 	@echo "  make test-palmos-shared - Require shared-library images and m68k execution"
