@@ -1,0 +1,166 @@
+name: Check
+
+# `make check`: build every library target (Atari, BBC, C64, MS-DOS, Amiga,
+# Linux) and run the host-side wire, link and soft65c02 tests. Palm OS needs
+# licensed SDKs and stays in `make check-palmos`, run locally.
+#
+# The build reads sibling checkouts (cc65 for the BBC assembly includes, the
+# Amiga driver for its headers) and the workspace's scripts/env.sh, so the
+# workspace is laid out as it is on a developer machine.
+on:
+  pull_request:
+  push:
+    branches: [master]
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    env:
+      WORKSPACE_DIR: nio-workspace
+
+    steps:
+      - name: Checkout workspace
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          repository: fujinet-nio/fujinet-nio-workspace
+          path: ${{ env.WORKSPACE_DIR }}
+          submodules: false
+
+      - name: Checkout this revision of fujinet-nio-lib
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          path: ${{ env.WORKSPACE_DIR }}/repos/fujinet-nio-lib
+
+      - name: Checkout fujinet-nio-driver
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          repository: fujinet-nio/fujinet-nio-driver
+          path: ${{ env.WORKSPACE_DIR }}/repos/fujinet-nio-driver
+
+      - name: Checkout cc65
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          repository: fujinet-nio/cc65
+          ref: bbc-clib
+          path: ${{ env.WORKSPACE_DIR }}/repos/cc65
+
+      # The soft65c02 tests read cc65-clib's test harness. Use the revision the
+      # workspace pins.
+      - name: Resolve cc65-clib revision
+        id: clib
+        run: echo "sha=$(git -C "$WORKSPACE_DIR" rev-parse HEAD:repos/cc65-clib)" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout cc65-clib
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          repository: fujinet-nio/cc65-clib
+          ref: ${{ steps.clib.outputs.sha }}
+          path: ${{ env.WORKSPACE_DIR }}/repos/cc65-clib
+
+      # The Palm Springboard transport host test includes sbnio.h, the firmware's
+      # register ABI, from fujinet-nio's bridges/ directory.
+      - name: Resolve fujinet-nio revision
+        id: nio
+        run: echo "sha=$(git -C "$WORKSPACE_DIR" rev-parse HEAD:repos/fujinet-nio)" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout fujinet-nio (bridges only)
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          repository: fujinet-nio/fujinet-nio
+          ref: ${{ steps.nio.outputs.sha }}
+          path: ${{ env.WORKSPACE_DIR }}/repos/fujinet-nio
+          sparse-checkout: bridges
+          submodules: false
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y -o Acquire::Retries=3 build-essential python3 zip
+
+      - name: Build cc65
+        working-directory: ${{ env.WORKSPACE_DIR }}/repos/cc65
+        run: |
+          make -j"$(nproc)"
+          echo "$PWD/bin" >> "$GITHUB_PATH"
+
+      - name: Setup Open Watcom
+        uses: open-watcom/setup-watcom@v0
+        with:
+          target: dos
+
+      # The Amiga builds use bebbo's amiga-gcc from /opt/amiga/bin
+      # (scripts/env.sh). The pinned image's binaries need a newer glibc than the
+      # runner has, so each tool there is a wrapper that runs it in the image,
+      # with $HOME (the workspace) and /tmp mounted at the same paths.
+      - name: Install amiga-gcc
+        env:
+          AMIGA_GCC_IMAGE: stefanreinauer/amiga-gcc:gcc-v6.5.0b-20261011@sha256:cafc64bc34a5450d858cf27d6f399222bed241fced3c093123b9ec764a82f26f
+        run: |
+          docker pull --platform linux/amd64 "$AMIGA_GCC_IMAGE"
+          sudo mkdir -p /opt/amiga/bin
+          for tool in $(docker run --rm --platform linux/amd64 "$AMIGA_GCC_IMAGE" ls /opt/amiga/bin); do
+            sudo tee "/opt/amiga/bin/$tool" > /dev/null <<WRAPPER
+          #!/bin/sh
+          exec docker run --rm -i --platform linux/amd64 -u "\$(id -u):\$(id -g)" \\
+            -v "\$HOME:\$HOME" -v /tmp:/tmp -w "\$PWD" "$AMIGA_GCC_IMAGE" "$tool" "\$@"
+          WRAPPER
+            sudo chmod +x "/opt/amiga/bin/$tool"
+          done
+          /opt/amiga/bin/m68k-amigaos-gcc --version
+
+      # The classic Mac build uses Retro68's m68k-apple-macos-gcc. Its image is
+      # the toolchain, so each tool is a wrapper that runs in it, as above.
+      - name: Install Retro68
+        env:
+          RETRO68_IMAGE: ghcr.io/autc04/retro68@sha256:dd923969100f408943f73c9618b3c7628686aae819583eecb0ddd1837da6943c
+        run: |
+          docker pull --platform linux/amd64 "$RETRO68_IMAGE"
+          mkdir -p "$HOME/retro68/bin"
+          for tool in gcc ar as; do
+            cat > "$HOME/retro68/bin/m68k-apple-macos-$tool" <<WRAPPER
+          #!/bin/sh
+          exec docker run --rm -i --platform linux/amd64 -u "\$(id -u):\$(id -g)" \\
+            -v "\$HOME:\$HOME" -v /tmp:/tmp -w "\$PWD" "$RETRO68_IMAGE" \\
+            /Retro68-build/toolchain/bin/m68k-apple-macos-$tool "\$@"
+          WRAPPER
+            chmod +x "$HOME/retro68/bin/m68k-apple-macos-$tool"
+          done
+          echo "$HOME/retro68/bin" >> "$GITHUB_PATH"
+          "$HOME/retro68/bin/m68k-apple-macos-gcc" --version
+
+      # The Atari tests run on the soft65c02 emulator. Pinned so the tests do
+      # not change with upstream heads.
+      - name: Cache soft65c02
+        id: soft65c02
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/soft65c02_unit
+            ~/.cargo/bin/soft65c02_tester
+          key: soft65c02-fe4c233a
+
+      # soft65c02_unit runs soft65c02_tester, so both are installed.
+      - name: Install soft65c02_unit and soft65c02_tester
+        if: steps.soft65c02.outputs.cache-hit != 'true'
+        run: |
+          cargo install --locked --git https://github.com/markjfisher/soft65c02 \
+            --rev fe4c233a08316003b9716a3ee0f74a7a091ce25c soft65c02_unit soft65c02_tester
+
+      - name: make check
+        working-directory: ${{ env.WORKSPACE_DIR }}/repos/fujinet-nio-lib
+        run: |
+          export NIO_WORKSPACE="$GITHUB_WORKSPACE/$WORKSPACE_DIR"
+          source "$NIO_WORKSPACE/scripts/env.sh"
+          make check
