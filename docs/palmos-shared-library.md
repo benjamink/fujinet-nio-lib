@@ -172,7 +172,11 @@ as safe display defaults but prevent initialization until explicitly repaired.
 **Springboard** validates Handspring support and card mapping instead of using
 a hardcoded physical address. Its shared-only guards preserve 16-bit bus
 operations, request/reply sequences and a pending-sequence tombstone, with
-mapping/deadline checks during access. It does not change RP2350 timing or ROM.
+mapping/deadline checks during access: every write checks the card mapping in
+full first, reads reuse a passed check for up to a quarter second, and the
+deadline is checked again after each full check. A status register that never
+reads the same twice in a row fails the exchange, and never sends a request
+again. It does not change RP2350 timing or ROM.
 
 **Serial** uses New Serial Manager where present and falls back to the legacy
 Serial Library. It selects the cradle port, 8N1, 9600/19200/38400/57600/115200 baud

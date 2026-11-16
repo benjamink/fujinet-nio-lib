@@ -71,11 +71,12 @@ forward compatibility, not actual OS 3.1H support. SDK 3.1H hardware, serial
 and macOS qualification remain separate.
 
 For each transport, induce a timeout or malformed reply, end the client and
-record RecoveryRequired and its unsaved NiL1 marker. Verify after library
+record RecoveryRequired and its NiL1 marker (an unsaved preference for USB and
+serial, a feature for CS1). Verify after library
 unload/reload. In a separate controlled run perform a Palm soft reset and
 inspect the marker before reset/Save/Test actions. Record whether the original
 marker and RecoveryRequired survived; do not infer persistence from mocks.
-Use a debugger/preference inspector for the raw record.
+Use a debugger, or a preference or feature inspector, for the raw record.
 
 Reset the actual remote peer/link as described in the
 [recovery procedure](palmos-shared-library.md#globals-cleanup-and-recovery),

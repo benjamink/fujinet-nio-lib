@@ -96,8 +96,12 @@ capacity, configuration flags and `FN_*` result. Supported does not mean availab
 passive inspection can report availability unknown. Probe's `modulePresent`
 is Springboard-specific. USB/serial unresolved-operation markers use separate
 **unsaved** NiL1 preferences 0x4e36/0x4e35, version 1; these are private recovery
-state, not configuration. CS1 uses private unsaved marker 0x4e32. Applications
-must never edit these records to force a retry.
+state, not configuration. CS1 uses private feature NiL1 0x4e32 (the CS1 base
+with the posted sequence in its low byte): a feature write is a table update,
+not a database write, so marking each doorbell costs microseconds, and a soft
+reset clears it. A CS1 marker that cannot be read (any Feature Manager error but
+`ftrErrNoSuchFeature`) counts as unresolved. Applications must never edit these
+markers to force a retry.
 
 `NioLibResetTransport(refNum, transport, confirmation)` requires an open library,
 ABI >=1.5 and capability `0x80`. Transport must be 1, 2 or 3; confirmation must

@@ -52,7 +52,7 @@ class RecoveryTests(unittest.TestCase):
 
     def test_cs1_explicit_reset_clears_corrupt_marker_without_mmio(self):
         m = NetworkMachine(); m.open()
-        m.preferences[0x4e694c31, 0x4e32] = (99, b'corrupt')
+        m.features[0x4e694c31, 0x4e32] = 7  # corrupt: a sequence with no CS1 base
         before = m.mmio
         self.assertEqual(reset(m, 1), 0)
         self.assertEqual(m.mmio, before)
