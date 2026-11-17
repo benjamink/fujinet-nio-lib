@@ -399,3 +399,8 @@ test-palmos-layout-audit:
 test: test-palmos-layout-audit
 test-palmos-layout:
 	PALMOS_SHARED_BUILD=$(PALMOS_SHARED_BUILD) PALMOS_SHARED_PYTHON=$(PALMOS_SHARED_PYTHON) bash tests/run_palmos_layout_test.sh
+
+.PHONY: test-linux-channel
+test-linux-channel:
+	bash tests/run_linux_channel_test.sh
+test: test-linux-channel

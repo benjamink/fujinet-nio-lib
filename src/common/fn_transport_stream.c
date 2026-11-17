@@ -106,13 +106,26 @@ static void channel_flush(void *context)
     fn_channel_drain_rx();
 }
 
+#ifdef FN_CHANNEL_BULK_WRITE
+static uint8_t channel_write_bytes(void *context, const uint8_t *data,
+                                   uint16_t length, uint16_t timeout_ms)
+{
+    (void)context;
+    return fn_channel_write_bytes(data, length, timeout_ms);
+}
+#endif
+
 static const fn_stream_channel_ops_t _stream_channel_ops = {
     channel_open,
     channel_close,
     channel_write_byte,
     channel_read_byte,
     channel_flush,
+#ifdef FN_CHANNEL_BULK_WRITE
+    channel_write_bytes
+#else
     NULL
+#endif
 };
 
 uint8_t fn_transport_init(void)

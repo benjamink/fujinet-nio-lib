@@ -5,6 +5,8 @@
  * transport owns SLIP framing and FujiBus request/response exchange.
  */
 
+#define _POSIX_C_SOURCE 200809L
+#include <time.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <stdio.h>
@@ -115,37 +117,56 @@ uint8_t fn_channel_ready(void)
     return _fd >= 0;
 }
 
-uint8_t fn_channel_write_byte(uint8_t value, uint16_t timeout_ms)
+/* Submit a complete encoded frame instead of exhausting CDC ACM's write
+ * buffers with one URB per byte. Partial writes advance, never replay bytes.
+ * Use one monotonic deadline, including EINTR and repeated readiness wakes. */
+uint8_t fn_channel_write_bytes(const uint8_t *data, uint16_t length,
+                               uint16_t timeout_ms)
 {
-    fd_set write_fds;
-    struct timeval tv;
-    ssize_t n;
-    int ret;
+    struct timespec now;
+    uint64_t deadline, ms;
+    uint16_t sent = 0;
+    int first = 1;
 
-    if (_fd < 0) {
-        return FN_ERR_NOT_READY;
-    }
+    if (_fd < 0) return FN_ERR_NOT_READY;
+    if (length && data == NULL) return FN_ERR_INVALID;
+    if (clock_gettime(CLOCK_MONOTONIC, &now) != 0) return FN_ERR_IO;
+    deadline = (uint64_t)now.tv_sec * 1000 + now.tv_nsec / 1000000 + timeout_ms;
+    while (sent < length) {
+        ssize_t n;
+        fd_set write_fds;
+        struct timeval tv;
+        int ret;
 
-    for (;;) {
-        n = write(_fd, &value, 1);
-        if (n == 1) {
-            return FN_OK;
+        if (clock_gettime(CLOCK_MONOTONIC, &now) != 0) return FN_ERR_IO;
+        ms = (uint64_t)now.tv_sec * 1000 + now.tv_nsec / 1000000;
+        if (!first && ms >= deadline) return FN_ERR_TIMEOUT;
+        first = 0;
+        n = write(_fd, data + sent, length - sent);
+        if (n > 0) {
+            sent += (uint16_t)n;
+            continue;
         }
-        if (n < 0 && errno != EAGAIN && errno != EWOULDBLOCK) {
-            return FN_ERR_IO;
-        }
+        if (n < 0 && errno == EINTR) continue;
+        if (n < 0 && errno != EAGAIN && errno != EWOULDBLOCK) return FN_ERR_IO;
+        if (ms >= deadline) return FN_ERR_TIMEOUT;
 
+        /* Recheck the nonblocking write even if a driver readiness wake was
+         * missed; do not spend the whole frame deadline waiting for one wake. */
+        ms = deadline - ms;
+        if (ms > 10) ms = 10;
         FD_ZERO(&write_fds);
         FD_SET(_fd, &write_fds);
-        timeout_to_timeval(timeout_ms, &tv);
+        timeout_to_timeval((uint16_t)ms, &tv);
         ret = select(_fd + 1, NULL, &write_fds, NULL, &tv);
-        if (ret < 0) {
-            return FN_ERR_IO;
-        }
-        if (ret == 0) {
-            return FN_ERR_TIMEOUT;
-        }
+        if (ret < 0 && errno != EINTR) return FN_ERR_IO;
     }
+    return FN_OK;
+}
+
+uint8_t fn_channel_write_byte(uint8_t value, uint16_t timeout_ms)
+{
+    return fn_channel_write_bytes(&value, 1, timeout_ms);
 }
 
 uint8_t fn_channel_read_byte(uint8_t *value, uint16_t timeout_ms)

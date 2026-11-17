@@ -12,7 +12,7 @@ AS = /usr/bin/as
 PLATFORM = linux
 
 # Compiler flags
-CFLAGS = -Wall -Wextra -O2 -std=c99
+CFLAGS = -Wall -Wextra -O2 -std=c99 -DFN_CHANNEL_BULK_WRITE
 
 # Assembler flags (not typically used for Linux target)
 ASFLAGS =
