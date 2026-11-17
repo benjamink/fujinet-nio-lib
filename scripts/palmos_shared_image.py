@@ -46,7 +46,7 @@ def make_image(blob):
     if text['address'] or data['address'] or bss['address'] != data['size']:
         raise ValueError("unsupported section bases/gap")
     total = bss['address'] + bss['size']
-    if not 0 < data['size'] <= total <= 32767 or text['size'] > 32767:
+    if not 0 < data['size'] <= total <= 32767 or text['size'] > 64720:
         raise ValueError("global/code size limit")
     reloc = by_name.get('.reloc', {}).get('data', b'')
     if len(reloc) % 12:
@@ -100,6 +100,66 @@ def prc(blob):
                 type=blob[60:64].decode(), creator=blob[64:68].decode()), resources
 
 
+
+def audit_caller_a5(dis, code, symbols):
+    # objdump also decodes inline tables/strings as instructions. Exempt only
+    # these byte-for-byte verified data objects, never an entire source module.
+    name = symbols['NioLibName']
+    if code[name:name + 7] != b'NioLib\0':
+        raise ValueError('unexpected inline data NioLibName')
+    data = [(symbols['NioLibDispatch'], name + 7)]
+    for name, literal in [('k_hex', b'0123456789abcdef\0'),
+                          ('k_persist_prefix', b'persist:///FujiNet/\0')]:
+        if name in symbols:
+            start = symbols[name]
+            if code[start:start + len(literal)] != literal:
+                raise ValueError('unexpected inline data ' + name)
+            data.append((start, start + len(literal)))
+    for line in dis.splitlines():
+        match = re.match(r'\s*([0-9a-f]+):', line)
+        if match and '%a5' in line:
+            address = int(match[1], 16)
+            if not any(start <= address < end for start, end in data):
+                raise ValueError('caller A5 dependency at ' + hex(address))
+
+
+def relative_ranges(out, code):
+    """Measure actual linked DISP16 fields at input COFF relocation sites.
+
+    The linker remains responsible for overflow checking, including archive
+    members. Report project objects separately so code growth has a measurable
+    warning signal instead of relying on the resource's total byte count.
+    """
+    edges = []
+    mapping = (out / 'NioLib.map').read_text()
+    for match in re.finditer(r'^ \.text\s+0x([0-9a-f]+)\s+0x([0-9a-f]+) (\S+\.o)$',
+                             mapping, re.M):
+        base, size = (int(match[i], 16) for i in (1, 2))
+        if not size:
+            continue
+        path = Path(match[3])
+        blob = path.read_bytes()
+        _, count, _, _, _, optional, _ = struct.unpack_from('>HHIIIHH', blob)
+        for section in range(count):
+            fields = struct.unpack_from('>8sIIIIIIHHI', blob, 20 + optional + section * 40)
+            if fields[0].rstrip(b'\0') != b'.text':
+                continue
+            for index in range(fields[7]):
+                offset, _, kind = struct.unpack_from('>IIH', blob, fields[5] + 10 * index)
+                if kind != 19:  # m68k COFF R_PCRWORD, checked signed by ld
+                    continue
+                address = base + offset - fields[2]
+                if address < base or address + 2 > base + size:
+                    raise ValueError('relative relocation outside mapped object')
+                displacement, = struct.unpack_from('>h', code, address)
+                edges.append(dict(object=str(path.resolve().relative_to(out.resolve())), site=address,
+                    displacement=displacement,
+                    headroom=min(32767 - displacement, displacement + 32768)))
+    if not edges:
+        raise ValueError('missing PC-relative relocation evidence')
+    return dict(checked_project_disp16=len(edges),
+                tightest=sorted(edges, key=lambda e: e['headroom'])[:10])
+
 def audit(out, objdump='m68k-palmos-objdump', nm='m68k-palmos-nm'):
     linked = out / 'NioLib'
     image, report = make_image(linked.read_bytes())
@@ -118,6 +178,9 @@ def audit(out, objdump='m68k-palmos-objdump', nm='m68k-palmos-nm'):
     if re.search(r'^\s+U\s', symbols, re.M):
         raise ValueError("unresolved runtime helper")
     sym = {m[2]: int(m[0], 16) for m in re.findall(r'^([0-9a-fA-F]+)\s+(\S)\s+(\S+)$', symbols, re.M)}
+    report['code_limit'] = 64720
+    report['code_headroom'] = 64720 - report['code_bytes']
+    report['globals_limit'] = 32767
     table = sym['NioLibDispatch']
     names = ['NioLibName', 'NioLibOpen', 'NioLibClose', 'NioLibSleep', 'NioLibWake',
              'NioLibGetVersion', 'NioLibGetCapabilities', 'NioLibTestGlobals']
@@ -131,10 +194,17 @@ def audit(out, objdump='m68k-palmos-objdump', nm='m68k-palmos-nm'):
         names += ["NioLibNetJsonQuery"]
     if "NioLibResetTransport" in sym:
         names += ["NioLibResetTransport"]
+    if "NioLibRawCall" in sym:
+        names += ['NioLibRawCall', 'NioLibFileStat', 'NioLibFileRead', 'NioLibFileWrite', 'NioLibFileMkdir', 'NioLibFileListPages', 'NioLibOpenHeaders', 'NioLibFujiGetInfo', 'NioLibWifiGetStatus', 'NioLibWifiGetConfig', 'NioLibWifiSetConfig', 'NioLibWifiGetAdapterInfo', 'NioLibWifiScan', 'NioLibWifiTryJoin', 'NioLibWifiGetJoinStatus', 'NioLibAppstoreStat', 'NioLibAppstoreRead', 'NioLibAppstoreWrite', 'NioLibAppstoreDelete', 'NioLibAppstoreList', 'NioLibSlotCatalogGet', 'NioLibSlotCatalogPut', 'NioLibSlotCatalogDelete', 'NioLibSlotCatalogRange', 'NioLibResolveMountTarget', 'NioLibFormatMountDisplay', 'NioLibClockSetTimezone', 'NioLibClockSetTimezoneSave', 'NioLibDiskMount', 'NioLibDiskUnmount', 'NioLibDiskFlush', 'NioLibDiskInfo', 'NioLibDiskClearChanged', 'NioLibDiskRestoreBoot', 'NioLibDiskReadSector', 'NioLibDiskWriteSector', 'NioLibClockSet', 'NioLibClockSyncNetworkTime', 'NioLibClockGetFormat', 'NioLibClockGetTz', 'NioLibLegacySetAppkeyDetails', 'NioLibLegacyReadAppkey', 'NioLibLegacyReadAppkeyBuffered', 'NioLibLegacyWriteAppkey', 'NioLibDiskLastError']
+    if 'NioLibDiskInspect' in sym:
+        names += ['NioLibDiskInspect', 'NioLibFujiGetHsio', 'NioLibFujiSetHsio']
+    if sym['NioLibName'] != table + 2 * len(names):
+        raise ValueError('unexpected dispatch/name extent')
     for i, name in enumerate(names):
         offset, = struct.unpack_from('>h', code, table + 2 * i)
         if table + offset != sym[name]:
             raise ValueError("incorrect dispatch ordinal " + name)
+    report['dispatch_headroom'] = 32767 - max(sym[n] - table for n in names)
     if sym['start'] != 0 or code[:2] != b'\x60\x00':
         raise ValueError("missing explicit entry trampoline")
     pointer_targets = {sym['nl_data_pointer']: (1, sym['nl_initialized']),
@@ -150,7 +220,9 @@ def audit(out, objdump='m68k-palmos-objdump', nm='m68k-palmos-nm'):
     for flag, suffix in (([objdump, '-d'], '.dis'), ([nm, '-n'], '.symbols')):
         (out / ('NioLibTest' + suffix)).write_text(
             subprocess.check_output(flag + [str(out / 'NioLibTest')], text=True))
-    if '%a5' in dis or re.search(r'<(?:PilotMain|_GccStartup|__do_global_ctors)', dis):
+    report['relative_ranges'] = relative_ranges(out, code)
+    audit_caller_a5(dis, code, sym)
+    if re.search(r'<(?:PilotMain|_GccStartup|__do_global_ctors)', dis):
         raise ValueError("caller A5 dependency or application CRT in library")
     helpers = ['globals_open', 'globals_close', 'globals_test']
     helpers += [name + '_a4' for name in names[8:]]

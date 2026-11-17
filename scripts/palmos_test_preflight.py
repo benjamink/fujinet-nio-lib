@@ -20,7 +20,9 @@ if missing:
     sys.exit('Build make palmos-shared first; missing artifacts: ' + ', '.join(missing))
 try:
     dispatch = json.loads((out / 'verification.json').read_text())['dispatch']
-    for name in ('NioLibBeginClient', 'NioLibGetConfig', 'NioLibNetJsonQuery', 'NioLibResetTransport'):
+    for name in ('NioLibBeginClient', 'NioLibGetConfig', 'NioLibNetJsonQuery', 'NioLibResetTransport',
+                 'NioLibRawCall', 'NioLibFileRead', 'NioLibFileWrite', 'NioLibDiskInspect',
+                 'NioLibFujiSetHsio'):
         if name not in dispatch:
             raise ValueError('missing ' + name)
 except (ValueError, KeyError) as error:

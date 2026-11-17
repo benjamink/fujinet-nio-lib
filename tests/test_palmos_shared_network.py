@@ -90,7 +90,7 @@ class NetworkMachine(foundation.PalmMachine):
         self.stack_low = min(self.stack_low, uc.reg_read(UC_M68K_REG_A7))
         if bytes(uc.mem_read(pc, 2)) != b'\x4e\x4f': return
         trap, sp = self.read16(pc + 2), uc.reg_read(UC_M68K_REG_A7)
-        if 0xa801 <= trap <= 0xa817:
+        if 0xa801 <= trap <= 0xa847 and self.read16(sp) == 7:
             target = self.read32(self.ENTRY) + struct.unpack('>h', uc.mem_read(
                 self.read32(self.ENTRY) + 2 * (trap - 0xa800), 2))[0]
             uc.mem_write(sp - 4, struct.pack('>I', pc + 4))
@@ -348,9 +348,9 @@ class NetworkTests(unittest.TestCase):
         self.assertEqual(m.end(token)[0], 0x8007)
         m.current_app = 1001
         self.assertEqual(m.clock(token + 1)[0], 0x8007)
-        m.uc.mem_write(m.globals + m.symbols['busy'], b'\x00\x01')
+        m.uc.mem_write(m.globals + m.symbols['nl_busy' if 'nl_busy' in m.symbols else 'busy'], b'\x00\x01')
         self.assertEqual(m.clock(token)[0], 0x8006)
-        m.uc.mem_write(m.globals + m.symbols['busy'], b'\x00\x00')
+        m.uc.mem_write(m.globals + m.symbols['nl_busy' if 'nl_busy' in m.symbols else 'busy'], b'\x00\x00')
         self.assertEqual(m.end(token)[:2], (0, 0))
         _, next_token, _ = m.begin()
         self.assertNotEqual(next_token, token)

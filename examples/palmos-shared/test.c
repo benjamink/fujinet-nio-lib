@@ -1,4 +1,6 @@
 #include "NioLibClient.h"
+#include "benchmark.h"
+#include "write_benchmark.h"
 
 Err NioTestGuardedGlobals(UInt16 refNum, UInt32 delta,
                          NioLibGlobalsResult *resultP, UInt16 *registersOK);
@@ -21,6 +23,12 @@ static void draw_results(void);
  * A local HTTP fixture can be selected at build time without changing NIO. */
 #ifndef NIO_TEST_URL
 #define NIO_TEST_URL "http://example.com/"
+#endif
+#ifndef NIO_TEST_FILE_URI
+#define NIO_TEST_FILE_URI "tnfs+tcp://tnfs.fujinet.online/PALM/nio-throughput.bin"
+#endif
+#ifndef NIO_TEST_WRITE_URI
+#define NIO_TEST_WRITE_URI "host:/nio-write-bench.bin"
 #endif
 
 static Boolean net_check(uint8_t result, const Char *name)
@@ -297,10 +305,96 @@ static void line(const Char *text, Coord y)
     WinDrawChars(text, StrLen(text), 4, y);
 }
 
+static FieldType *benchmark_field(void)
+{
+    FormType *form = FrmGetActiveForm();
+    UInt16 id = FrmGetActiveFormID() == 1030 ? 1031 : 1021;
+    return (FieldType *)FrmGetObjectPtr(form, FrmGetObjectIndex(form, id));
+}
+
+static void draw_benchmark(void)
+{
+    Char text[64];
+    const Char *status = "64 KiB / 512-byte reads";
+    RectangleType area = {{2, 60}, {156, 76}};
+    switch (nio_benchmark_failure) {
+    case nioBenchmarkInit: status = "FAIL: initialize client"; break;
+    case nioBenchmarkRead: status = "FAIL: FileRead API"; break;
+    case nioBenchmarkShort: status = "FAIL: short read"; break;
+    case nioBenchmarkPattern: status = "FAIL: data mismatch"; break;
+    default:
+        if (nio_benchmark.bytes == 65536UL)
+            status = nio_benchmark.cleanupResult || nio_benchmark.cleanupPalm ?
+                "FAIL: cleanup" : "PASS: all bytes verified";
+    }
+    WinEraseRectangle(&area, 0);
+    line(status, 62);
+    StrPrintF(text, "%lu bytes / %lu ticks", nio_benchmark.bytes, nio_benchmark.ticks); line(text, 74);
+    StrPrintF(text, "%lu B/s Sum %08lX", nio_benchmark.rate, nio_benchmark.checksum); line(text, 86);
+    StrPrintF(text, "Calls %u FN %u/%04X", nio_benchmark.calls,
+        nio_benchmark.result, nio_benchmark.palm); line(text, 98);
+    StrPrintF(text, "Start %lu Offset %lu", nio_benchmark_started, nio_benchmark.bytes); line(text, 110);
+    StrPrintF(text, "Cleanup FN %u Palm %04X", nio_benchmark.cleanupResult,
+        nio_benchmark.cleanupPalm); line(text, 122);
+}
+
+static void draw_write_benchmark(void)
+{
+    Char text[64];
+    const Char *status = "Overwrites 64 KiB test file";
+    RectangleType area = {{2, 60}, {156, 76}};
+    switch (nio_write_benchmark.stage) {
+    case nioWriteInit: status = "FAIL: initialize client"; break;
+    case nioWriteError: status = "FAIL: FileWrite API"; break;
+    case nioWriteShort: status = "FAIL: short write"; break;
+    case nioVerifyRead: status = "FAIL: readback API"; break;
+    case nioVerifyShort: status = "FAIL: short readback"; break;
+    case nioVerifyPattern: status = "FAIL: verify mismatch"; break;
+    case nioVerifySize: status = "FAIL: unexpected tail"; break;
+    case nioWriteDone:
+        status = nio_write_benchmark.cleanupResult || nio_write_benchmark.cleanupPalm ?
+            "FAIL: cleanup" : "PASS: write + verify";
+    }
+    WinEraseRectangle(&area, 0);
+    line(status, 62);
+    StrPrintF(text, "%lu bytes / %lu ticks", nio_write_benchmark.bytes,
+        nio_write_benchmark.ticks); line(text, 74);
+    StrPrintF(text, "%lu B/s Calls %u", nio_write_benchmark.rate,
+        nio_write_benchmark.calls); line(text, 86);
+    StrPrintF(text, "Verify %lu Sum %08lX", nio_write_benchmark.verifyBytes,
+        nio_write_benchmark.checksum); line(text, 98);
+    StrPrintF(text, "FN %u/%04X Off %lu", nio_write_benchmark.result,
+        nio_write_benchmark.palm, nio_write_benchmark.failedOffset); line(text, 110);
+    StrPrintF(text, "Cleanup FN %u Palm %04X", nio_write_benchmark.cleanupResult,
+        nio_write_benchmark.cleanupPalm); line(text, 122);
+}
+
+static void benchmark_details(Boolean writing)
+{
+    Char a[96], b[96], c[96];
+    if (writing) {
+        StrPrintF(a, "Init %lu Verify %lu End %lu ticks", nio_write_benchmark.initTicks,
+            nio_write_benchmark.verifyTicks, nio_write_benchmark.cleanupTicks);
+        StrPrintF(b, "Write calls %u Readback %u\nStart %lu", nio_write_benchmark.calls,
+            nio_write_benchmark.verifyCalls, nio_write_benchmark.started);
+        StrPrintF(c, "Stage %u Error %u Offset %lu", nio_write_benchmark.stage,
+            nio_write_benchmark.errors, nio_write_benchmark.failedOffset);
+    } else {
+        StrPrintF(a, "Init %lu End %lu ticks", nio_benchmark.initTicks, nio_benchmark.cleanupTicks);
+        StrPrintF(b, "Start %lu\nOffset %lu", nio_benchmark_started, nio_benchmark.bytes);
+        StrPrintF(c, "Stage %u Errors %u", nio_benchmark_failure, nio_benchmark.errors);
+    }
+    FrmCustomAlert(writing ? 1037 : 1027, a, b, c);
+}
+
 static void draw_results(void)
 {
     Char text[48];
     RectangleType area = {{2, 17}, {156, 119}};
+    if (FrmGetActiveFormID() == 1020) { draw_benchmark(); return; }
+    if (FrmGetActiveFormID() == 1030) { draw_write_benchmark(); return; }
+    /* Stop above the speed-test buttons rather than erasing their labels. */
+    if (FrmGetActiveFormID() == 1002) area.extent.y = 101;
     WinEraseRectangle(&area, 0);
     if (FrmGetActiveFormID() == 1010) {
         line("Transport settings (ABI 1.2)", 19);
@@ -321,7 +415,6 @@ static void draw_results(void)
         StrPrintF(text, "UTC epoch %lu", net_time); line(text, 80);
         StrPrintF(text, "HTTP %u  Bytes %u", net_http, net_bytes); line(text, 95);
         line("Run: clock + two GETs", 110);
-        line("Exit always ends client", 125);
         return;
     }
     line(failed ? "FAIL" : "PASS - ABI 1.0", 20);
@@ -343,12 +436,42 @@ static Boolean handle(EventType *e)
         FrmDrawForm(FrmGetActiveForm());
         if (FrmGetActiveFormID() == 1000) run_tests();
         if (FrmGetActiveFormID() == 1010) config_read();
+        if (FrmGetActiveFormID() == 1020 || FrmGetActiveFormID() == 1030) {
+            const Char *uri = FrmGetActiveFormID() == 1030 ? NIO_TEST_WRITE_URI : NIO_TEST_FILE_URI;
+            /* Palm's older SDK lacks const on this read-only input. */
+            FldInsert(benchmark_field(), (Char *)uri, StrLen(uri));
+        }
         draw_results(); return true;
     }
     if (e->eType == ctlSelectEvent && e->data.ctlSelect.controlID == 1001) {
         run_tests(); draw_results(); return true;
     }
     if (e->eType == ctlSelectEvent) {
+        if (e->data.ctlSelect.controlID == 1018) { FrmGotoForm(1020); return true; }
+        if (e->data.ctlSelect.controlID == 1019) { FrmGotoForm(1030); return true; }
+        if (e->data.ctlSelect.controlID == 1023 || e->data.ctlSelect.controlID == 1033) {
+            FrmGotoForm(1002); return true;
+        }
+        if (e->data.ctlSelect.controlID == 1026 || e->data.ctlSelect.controlID == 1034) {
+            benchmark_details(FrmGetActiveFormID() == 1030); return true;
+        }
+        if (e->data.ctlSelect.controlID == 1022 || e->data.ctlSelect.controlID == 1032) {
+            const Char *text = FldGetTextPtr(benchmark_field());
+            Char uri[193];
+            UInt16 length = text ? StrLen(text) : 0;
+            Boolean writing = FrmGetActiveFormID() == 1030;
+            /* Do not keep a movable field-text pointer across the modal
+             * confirmation or library allocations. Copy outside timing. */
+            if (!length || length >= sizeof(uri)) return true;
+            MemMove(uri, text, length + 1);
+            if (!writing || FrmAlert(1036) == 0) {
+                line(writing ? "Writing; please wait..." : "Reading; please wait...", 62);
+                if (writing) NioTestWriteBenchmark(uri);
+                else NioTestBenchmark(uri);
+                draw_results();
+            }
+            return true;
+        }
         if (e->data.ctlSelect.controlID == 1011) { config_close(); FrmGotoForm(1000); return true; }
         if (e->data.ctlSelect.controlID == 1007) { fn_shutdown(); FrmGotoForm(1010); return true; }
         if (e->data.ctlSelect.controlID >= 1012 && e->data.ctlSelect.controlID <= 1017) {

@@ -12,6 +12,7 @@ static uint16_t last_request_len;
 static uint8_t reply_status;
 static uint16_t reply_len;
 static uint8_t reply[64];
+static unsigned calls;
 
 #ifdef TEST_BBC_RAW
 uint8_t fn_bbc_device_call_raw(uint8_t device, uint8_t command, const uint8_t *payload,
@@ -23,6 +24,7 @@ uint8_t fn_raw_call(uint8_t device, uint8_t command, const void *payload,
                     fn_raw_response_t *response)
 #endif
 {
+    ++calls;
     last_device = device;
     last_command = command;
     last_request_len = payload_length;
@@ -56,11 +58,14 @@ int main(void)
         5, 'm', 'i', 'n', 'e', 'r' /* optional filter */
     };
     uint8_t buf[128];
-    fn_file_io_t io = { buf, sizeof(buf) };
+    fn_file_io_t io;
     fn_list_pages_t out;
     fn_list_pages_req_t rq = { 5, 9, 480, FN_LIST_SORT | FN_LIST_DIRS_FIRST, 31, "miner" };
     fn_list_pages_req_t plain = { 0, 9, 480, 0, 0, 0 };
     uint8_t r;
+    unsigned before;
+
+    io.buffer = buf; io.capacity = sizeof(buf);
 
     /* a reply with one page of one entry "x": 0 dir flags, size 7, mtime 9 */
     memset(reply, 0, sizeof(reply));
@@ -102,16 +107,27 @@ int main(void)
     CHECK(fn_file_list_pages(&io, "a:/", &plain, &out) == FN_ERR_IO);
 
     /* bad arguments are refused without a call */
+    before = calls;
+    CHECK(fn_file_list_pages(NULL, "a:/", &plain, &out) == FN_ERR_INVALID);
+    CHECK(fn_file_list_pages(&io, NULL, &plain, &out) == FN_ERR_INVALID);
+    CHECK(fn_file_list_pages(&io, "a:/", NULL, &out) == FN_ERR_INVALID);
+    CHECK(fn_file_list_pages(&io, "a:/", &plain, NULL) == FN_ERR_INVALID);
+    io.buffer = NULL;
+    CHECK(fn_file_list_pages(&io, "a:/", &plain, &out) == FN_ERR_INVALID);
+    io.buffer = buf;
     CHECK(fn_file_list_pages(&io, "", &plain, &out) == FN_ERR_INVALID);
     {
         fn_list_pages_req_t none = { 0, 0, 480, 0, 0, 0 };
-        fn_file_io_t tiny = { buf, 8 };
+        fn_file_io_t tiny;
+
+        tiny.buffer = buf; tiny.capacity = 8;
 
         CHECK(fn_file_list_pages(&io, "a:/", &none, &out) == FN_ERR_INVALID);
         CHECK(fn_file_list_pages(&tiny, "a:/", &plain, &out) == FN_ERR_INVALID);
         tiny.capacity = 15; /* fixed request fits, filter does not */
         CHECK(fn_file_list_pages(&tiny, "a:/", &rq, &out) == FN_ERR_INVALID);
     }
+    CHECK(calls == before);
     puts("list pages wire test passed");
     return 0;
 }

@@ -1,0 +1,9 @@
+#include "../client_private.h"
+
+uint8_t fn_resolve_mount_target(fn_mount_resolve_io_t * io, const char * host, const char * browse_path, const char * leaf, char * canonical_uri, uint16_t canonical_cap, char * display_path, uint16_t display_cap, uint8_t * flags_out)
+{
+    uint8_t result = nl_client_extended_ready();
+    if (result) return result;
+    return nl_client_translate(NioLibResolveMountTarget(nl_client_ref, nl_client_token,
+        io, host, browse_path, leaf, canonical_uri, canonical_cap, display_path, display_cap, flags_out, &nl_client_result_code));
+}

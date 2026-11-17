@@ -99,10 +99,16 @@ int main(void)
     bool (*volatile buffered_appkey)(uint8_t, uint16_t *, uint8_t *, uint8_t *, uint16_t) = fuji_read_appkey_buffered;
     uint8_t (*volatile get_hsio)(uint8_t *) = fn_fuji_get_hsio;
     uint8_t (*volatile set_hsio)(uint8_t) = fn_fuji_set_hsio;
+    uint8_t (*volatile file_stat_call)(fn_file_io_t *, const char *, fn_file_stat_t *) = fn_file_stat;
+    uint8_t (*volatile file_read_call)(fn_file_io_t *, const char *, uint32_t, uint8_t *, uint16_t, fn_file_read_t *) = fn_file_read;
+    uint8_t (*volatile file_write_call)(fn_file_io_t *, const char *, uint32_t, const uint8_t *, uint16_t, fn_file_write_t *) = fn_file_write;
+    uint8_t (*volatile file_mkdir_call)(fn_file_io_t *, const char *, uint8_t) = fn_file_mkdir;
+    uint8_t (*volatile disk_inspect_call)(fn_service_io_t *, const char *, uint8_t, uint16_t, fn_disk_inspection_t *) = fn_disk_inspect;
     fn_stream_session_t session;
     fn_disk_info_t info;
     uint8_t wire[64];
 
+    if (!file_stat_call || !file_read_call || !file_write_call || !file_mkdir_call || !disk_inspect_call) return 1;
     if (!buffered_appkey || !get_hsio || !set_hsio) return 1;
     if (fn_stream_session_init(&session, &channel_ops, 0, wire,
                                sizeof(wire)) != FN_OK) return 1;

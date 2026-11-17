@@ -459,6 +459,32 @@ typedef struct {
     uint16_t capacity;       /**< Bytes available at buffer */
 } fn_service_io_t;
 
+/* General FileDevice operations. Scratch storage belongs to the caller and
+ * must not overlap separate input/output data. Offsets are explicit; no remote
+ * file handle is retained. Offset-zero writes create/truncate the file.
+ * Each transfer must fit one packet; callers advance by bytes_read/written.
+ * Results are published only after a complete, validated response. */
+#define FN_FILE_EOF 0x01
+#define FN_FILE_TRUNCATED 0x02
+#define FN_FILE_IS_DIR 0x01
+#define FN_FILE_EXISTS 0x02
+#define FN_FILE_MKDIR_PARENTS 0x01
+#define FN_FILE_MKDIR_EXIST_OK 0x02
+typedef struct {
+    uint8_t flags;
+    uint32_t size_bytes, size_bytes_high;
+    uint32_t mtime_unix, mtime_unix_high;
+} fn_file_stat_t;
+typedef fn_appstore_read_t fn_file_read_t;
+typedef fn_appstore_write_t fn_file_write_t;
+typedef fn_service_io_t fn_file_io_t;
+uint8_t fn_file_stat(fn_file_io_t *io, const char *uri, fn_file_stat_t *out);
+uint8_t fn_file_read(fn_file_io_t *io, const char *uri, uint32_t offset,
+                     uint8_t *data, uint16_t capacity, fn_file_read_t *out);
+uint8_t fn_file_write(fn_file_io_t *io, const char *uri, uint32_t offset,
+                      const uint8_t *data, uint16_t length, fn_file_write_t *out);
+uint8_t fn_file_mkdir(fn_file_io_t *io, const char *uri, uint8_t flags);
+
 /* ---- FileService: paged directory listing ----------------------------------
  *
  * fn_file_list_pages() asks the device for whole pages of a directory.  The
@@ -499,8 +525,6 @@ typedef struct {
     const uint8_t *pages;    /**< page_count pages, inside the caller's buffer */
     uint16_t pages_len;      /**< their total length in bytes */
 } fn_list_pages_t;
-
-typedef fn_service_io_t fn_file_io_t;
 
 /** What fn_file_list_pages asks for. */
 typedef struct {
@@ -591,6 +615,12 @@ typedef struct {
     uint16_t boot_length;
     uint8_t boot_bytes[FN_DISK_INSPECT_BOOT_BYTES];
 } fn_disk_inspection_t;
+
+/* Inspect without mounting. Caller-owned scratch must not overlap inspection.
+ * Boot bytes are bounded by scratch/packet capacity and may be less than 512. */
+uint8_t fn_disk_inspect(fn_service_io_t *io, const char *uri, uint8_t type,
+                        uint16_t sector_size_hint, fn_disk_inspection_t *inspection);
+
 
 /** Explicit DiskDevice client state for resident or concurrent callers. */
 #define FN_DISK_CONTEXT_PACKET_SIZE 1024
@@ -1229,7 +1259,7 @@ typedef enum {
     FN_TIME_FORMAT_UTC_ISO    = 0x04,
     
     /** 16 bytes: "YYYYMMDD0HHMMSS000" */
-    FN_TIME_FORMAT_APPLE3_SOS = 0x05,
+    FN_TIME_FORMAT_APPLE3_SOS = 0x05
 } FnTimeFormat;
 
 /** Maximum formatted time string length (for string formats) */

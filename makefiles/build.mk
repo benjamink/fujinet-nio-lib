@@ -53,7 +53,13 @@ LIBRARY := $(BUILDDIR)/$(PROGRAM)-atari-$(ATARI_BACKEND)$(LIBEXT)
 endif
 
 # Common sources (shared across all platforms)
-COMMON_SRCS_DEFAULT := $(SRCDIR)/common/fn_slip.c \
+COMMON_SRCS_DEFAULT := $(SRCDIR)/common/fn_disk_inspect.c \
+                       $(SRCDIR)/common/fn_file_common.c \
+                       $(SRCDIR)/common/fn_file_stat.c \
+                       $(SRCDIR)/common/fn_file_read.c \
+                       $(SRCDIR)/common/fn_file_write.c \
+                       $(SRCDIR)/common/fn_file_mkdir.c \
+                       $(SRCDIR)/common/fn_slip.c \
                        $(SRCDIR)/common/fn_session.c \
                        $(SRCDIR)/common/fn_packet.c \
                        $(SRCDIR)/common/fn_checksum_fold.c \
@@ -88,6 +94,7 @@ COMMON_SRCS_DEFAULT := $(SRCDIR)/common/fn_slip.c \
                        $(SRCDIR)/common/fn_clock_get.c \
                        $(SRCDIR)/common/fn_clock_set.c \
                        $(SRCDIR)/common/fn_clock_sync_network_time.c \
+                       $(SRCDIR)/common/fn_clock_format_capacity.c \
                        $(SRCDIR)/common/fn_clock_format_common.c \
                        $(SRCDIR)/common/fn_clock_get_format.c \
                        $(SRCDIR)/common/fn_clock_get_tz.c \
@@ -141,13 +148,21 @@ LEGACY_SRCS_DEFAULT := $(SRCDIR)/legacy/fn_legacy_appkey_state.c \
                        $(SRCDIR)/legacy/fn_legacy_appkey_read_buffered.c \
                        $(SRCDIR)/legacy/fn_legacy_appkey_write.c
 
-COMMON_SRCS_BBC := $(SRCDIR)/common/fn_file_list_pages.c \
+COMMON_SRCS_BBC := $(SRCDIR)/common/fn_disk_common.c \
+                   $(SRCDIR)/common/fn_disk_inspect.c \
+                   $(SRCDIR)/common/fn_file_common.c \
+                   $(SRCDIR)/common/fn_file_stat.c \
+                   $(SRCDIR)/common/fn_file_read.c \
+                   $(SRCDIR)/common/fn_file_write.c \
+                   $(SRCDIR)/common/fn_file_mkdir.c \
+                   $(SRCDIR)/common/fn_file_list_pages.c \
                    $(SRCDIR)/common/fn_util.c \
                    $(SRCDIR)/common/fn_ext.c \
                    $(SRCDIR)/common/fn_clock_time_common.c \
                    $(SRCDIR)/common/fn_clock_get.c \
                    $(SRCDIR)/common/fn_clock_set.c \
                    $(SRCDIR)/common/fn_clock_sync_network_time.c \
+                   $(SRCDIR)/common/fn_clock_format_capacity.c \
                    $(SRCDIR)/common/fn_clock_format_common.c \
                    $(SRCDIR)/common/fn_clock_get_format.c \
                    $(SRCDIR)/common/fn_clock_get_tz.c \

@@ -328,10 +328,10 @@ class TransportTests(unittest.TestCase):
 
     def test_serial_response_echo_rejection_and_reentrancy(self):
         m = self.machine(); _, token, _ = m.begin()
-        m.uc.mem_write(m.globals + m.symbols['busy'], b'\0\1')
+        m.uc.mem_write(m.globals + m.symbols['nl_busy' if 'nl_busy' in m.symbols else 'busy'], b'\0\1')
         self.assertEqual(m.clock(token)[0], 0x8006)
         self.assertEqual(m.set_config(config()), 0x8006)
-        m.uc.mem_write(m.globals + m.symbols['busy'], b'\0\0')
+        m.uc.mem_write(m.globals + m.symbols['nl_busy' if 'nl_busy' in m.symbols else 'busy'], b'\0\0')
         _, handle, result = m.net_open(token); self.assertEqual(result, 0)
         # Correct checksum and packet type but a different handle: no copy.
         m.serial_reply = reply(0xfd, 2, struct.pack('<BBHHIH', 1, 1, 0, handle+1, 0, 3)+b'bad')

@@ -55,7 +55,7 @@ PALMOS_BUILDER ?= auto
 PALMDEV_TOOLCHAIN ?= $(if $(NIO_WORKSPACE),$(NIO_WORKSPACE)/external/palmdev-toolchain,$(abspath ../palmdev-toolchain))
 export PALMOS_SDK_VERSION PALMOS_BUILDER PALMDEV_TOOLCHAIN
 palmos-shared:
-	bash scripts/palmos-build.sh $(MAKE) -f makefiles/palmos-shared.mk B=$(PALMOS_SHARED_BUILD) $(if $(SBNIO_ABI_INCLUDE),SBNIO_ABI_INCLUDE="$(SBNIO_ABI_INCLUDE)") $(if $(HANDSPRING_INCLUDE),HANDSPRING_INCLUDE="$(HANDSPRING_INCLUDE)")
+	bash scripts/palmos-build.sh $(MAKE) -f makefiles/palmos-shared.mk B=$(PALMOS_SHARED_BUILD) $(if $(PALMOS_LAYOUT_PAD_BYTES),PALMOS_LAYOUT_PAD_BYTES=$(PALMOS_LAYOUT_PAD_BYTES)) $(if $(PALMOS_LAYOUT_PAD_POSITION),PALMOS_LAYOUT_PAD_POSITION=$(PALMOS_LAYOUT_PAD_POSITION)) $(if $(SBNIO_ABI_INCLUDE),SBNIO_ABI_INCLUDE="$(SBNIO_ABI_INCLUDE)") $(if $(HANDSPRING_INCLUDE),HANDSPRING_INCLUDE="$(HANDSPRING_INCLUDE)")
 
 test-palmos-shared:
 	PALMOS_SHARED_BUILD=$(PALMOS_SHARED_BUILD) $(PALMOS_SHARED_PYTHON) scripts/palmos_test_preflight.py
@@ -306,6 +306,7 @@ check-palmos:
 	done
 	$(MAKE) palmos-shared
 	$(MAKE) test-palmos-shared
+	$(MAKE) test-palmos-layout
 
 # Help
 help:
@@ -381,3 +382,20 @@ test: test-bbc-ready
 test-bbc-headers:
 	bash tests/run_bbc_headers_test.sh
 test: test-bbc-headers
+
+# Common FileDevice transfers, disk inspection and bounded clock decoding.
+.PHONY: test-file-wire test-clock-format-wire test-common-utility-cc65
+test-file-wire:
+	bash tests/run_file_wire_test.sh
+test-clock-format-wire:
+	bash tests/run_clock_format_wire_test.sh
+test-common-utility-cc65:
+	bash tests/run_common_utility_cc65_test.sh
+test: test-file-wire test-clock-format-wire test-common-utility-cc65
+
+.PHONY: test-palmos-layout-audit test-palmos-layout
+test-palmos-layout-audit:
+	python3 -m unittest discover -s tests -p test_palmos_shared.py -k LayoutAuditTests -v
+test: test-palmos-layout-audit
+test-palmos-layout:
+	PALMOS_SHARED_BUILD=$(PALMOS_SHARED_BUILD) PALMOS_SHARED_PYTHON=$(PALMOS_SHARED_PYTHON) bash tests/run_palmos_layout_test.sh

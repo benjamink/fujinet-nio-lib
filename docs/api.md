@@ -696,3 +696,28 @@ uint8_t fn_atari_hsio_index(void);    /* 0-9 in use, or 0xFF when off */
 ```
 
 Opt-in, after `fn_init()`. See [atari/hsio.md](atari/hsio.md).
+
+
+## General FileDevice transfers and disk inspection
+
+The caller owns `fn_file_io_t` scratch (`buffer`, `capacity`); keep it separate
+from transfer data and result structures. `fn_file_stat(io, uri, out)` returns
+existence/directory flags plus low/high 32-bit size and modification time.
+`fn_file_read(io, uri, offset, data, capacity, out)` returns flags and the actual
+byte count; advance offsets by that count and stop at `FN_FILE_EOF`.
+`fn_file_write(io, uri, offset, data, length, out)` reports accepted bytes;
+handle partial writes explicitly. Offset zero creates/truncates the file,
+including a zero-length write. Each operation must fit one transport packet.
+`fn_file_mkdir(io, uri, flags)` supports `FN_FILE_MKDIR_PARENTS` and
+`FN_FILE_MKDIR_EXIST_OK`. Errors do not publish partial typed results or trigger
+an implicit replay. `fn_file_list_pages` remains the paged browsing interface.
+ListPages rejects null required arguments (including scratch storage) with
+`FN_ERR_INVALID` before I/O in both static and Palm shared calls.
+
+`fn_disk_inspect(io, uri, type, sector_size_hint, inspection)` inspects without
+mounting and uses the same caller-owned scratch convention. The existing
+`fn_disk_inspection_t` holds geometry and up to 512 boot bytes; actual boot
+length is bounded by scratch and target packet capacity. This keeps full
+results on larger targets and avoids a library-owned scratch reservation on
+small systems. The callback-based `_context` variant remains available to
+static-library clients.

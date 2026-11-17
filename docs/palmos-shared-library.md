@@ -130,7 +130,7 @@ using earlier compatible traps need no rebuild merely to select USB.
 
 ## Application contract
 
-Current identity is **NioLib / libr / NiL1**, ABI **1.5**, implementation **8**.
+Current identity is **NioLib / libr / NiL1**, ABI **1.6**, implementation **9**.
 See [ABI reference](palmos-shared-abi.md) for capabilities, traps and preferences.
 The client supports networking libraries from ABI 1.1 onward, negotiates optional
 functions, and returns Unsupported instead of calling an unknown JSON trap.
@@ -238,7 +238,7 @@ and dispatch table; `nDat/0` contains a validated initialized-data/BSS/fixup ima
 `SysLibTblEntry(refNum)->globalsP`, preserving the caller's A4/A5. First Open
 allocates system-owned storage, initializes data/BSS and relocates data/code
 pointers. The serializer rejects unsupported fixups, caller-A5 dependencies,
-unresolved helpers and code/global images above its 32767-byte limits.
+unresolved helpers, code above 64,720 bytes, and globals above 32,767 bytes.
 
 External library Open counts, foreground ownership, physical driver ownership
 and unresolved-command markers are separate. EndClient releases foreground
@@ -287,7 +287,7 @@ must not be treated as permanent storage.
 compiled m68k tests with mocked Palm traps, optional app fixtures and physical
 acceptance steps. Automated tests validate generated code, not full Palm OS behavior.
 
-The current ABI 1.5 recovery changes and SDK 3.1-built artifacts have not been
+The current ABI 1.6 service additions and SDK 3.1-built artifacts have not been
 qualified on physical hardware. Linux builds and mocked execution tests pass;
 the user has independently confirmed the Palm build works. The Prism results
 below describe earlier revisions and do not verify the new Reset action,
@@ -304,3 +304,23 @@ Serial hardware, macOS compile/runtime, ESP32-S3 USB Host, general Palm-branded
 USB, arbitrary physical fault recovery and long-duration heap/stress use remain
 unqualified. ESP32-S3 USB Host is future work: it would be an alternative to the
 RP2350 Springboard configuration, not a simultaneous connection or role switch.
+
+## ABI 1.6 service coverage
+
+The installed shared library now exposes files (stat/read/write/mkdir/ListPages),
+HTTP header Open, device and Wi-Fi configuration, AppStore and legacy appkeys,
+slot catalogs and mount-path helpers, disk operations and inspection, and the
+complete clock service. Both ABI >=1.6 and nioLibCapServices are required; the
+client returns Unsupported against older libraries without invoking new traps.
+See [the ABI reference](palmos-shared-abi.md#abi-16-service-additions) for entry
+points and [the layout guide](palmos-shared-layout.md) for growth constraints.
+
+These entries reuse common codecs inside the library. Applications link only
+libniolib-client.a and provide their own scratch and data buffers. File transfers
+use explicit offsets, fit one packet, and do not add automatic retries. Offset
+zero writes create/truncate; callers must handle partial acceptance and ambiguous
+errors. PRC installation remains application-owned Palm OS work.
+
+The new ABI preserves existing trap ordinals and uses implementation identity 9.
+It retains PR #11 transport behavior and has not yet been qualified on hardware.
+Do not pair these public traps with the earlier private PR11 benchmark adapters.

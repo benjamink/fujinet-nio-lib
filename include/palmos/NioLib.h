@@ -1,4 +1,4 @@
-/* Palm OS system-library ABI 1.5; original 1.0 traps stay unchanged. */
+/* Palm OS system-library ABI 1.6; original 1.0 traps stay unchanged. */
 #ifndef NIO_PALM_LIBRARY_H
 #define NIO_PALM_LIBRARY_H
 #include <PalmOS.h>
@@ -8,7 +8,7 @@
 #define nioTestCreator 'NiT1'
 #define nioLibType 'libr'
 #define nioLibAbiMajor 1
-#define nioLibAbiMinor 5
+#define nioLibAbiMinor 6
 #define nioLibCapA4Globals 0x00000001UL
 #define nioLibCapNetwork   0x00000002UL
 #define nioLibCapClock     0x00000004UL
@@ -16,6 +16,7 @@
 #define nioLibCapTransports 0x00000010UL
 #define nioLibCapUSB 0x00000020UL
 #define nioLibCapJSONQuery 0x00000040UL
+#define nioLibCapServices 0x00000100UL
 #define nioLibCapRecovery 0x00000080UL
 #define nioLibCapTestOnly  0x80000000UL
 /* Legacy bit/name retained: it now identifies the foundation diagnostics. */
@@ -169,5 +170,6 @@ Err NioLibNetJsonQuery(UInt16 refNum, UInt32 token, UInt16 handle,
  * Confirmation must equal nioRecoveryPeerReset; transport is explicit. */
 Err NioLibResetTransport(UInt16 refNum, UInt16 transport, UInt16 confirmation)
     NIO_LIB_TRAP(nioLibTrapResetTransport);
+#include "NioLibServices.h"
 #undef NIO_LIB_TRAP
 #endif
