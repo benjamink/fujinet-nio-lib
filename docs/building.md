@@ -34,22 +34,17 @@ This document describes how to build the fujinet-nio-lib library for various pla
   ```
 
 ### For classic Macintosh builds:
-- [Retro68](https://github.com/autc04/Retro68), built, with its `toolchain/bin` on
-  `PATH` (`m68k-apple-macos-gcc`, `m68k-apple-macos-ar`):
+`make mac68k` (and so `make check` and `scripts/release.py`) picks the toolchain itself
+(`scripts/mac68k-build.sh`, `MAC68K_BUILDER`):
 
-  ```bash
-  export PATH=$RETRO68_BUILD/toolchain/bin:$PATH
-  ```
-- Or its Docker image instead, which needs no Apple files, because it uses the
-  open-source multiversal interfaces. From the repository root:
-
-  ```bash
-  docker run --rm -u $(id -u):$(id -g) -e HOME=/tmp --entrypoint /bin/bash \
-    -v "$PWD":/work -w /work ghcr.io/autc04/retro68 \
-    -c 'export PATH=/Retro68-build/toolchain/bin:$PATH; make mac68k'
-  ```
-
-`mac68k` is in `EXTRA_TARGETS`, so `make check` builds it and needs Retro68 too.
+- `auto` (default): [Retro68](https://github.com/autc04/Retro68) from `PATH`
+  (`m68k-apple-macos-gcc`, `m68k-apple-macos-ar`) if it is installed, otherwise its Docker
+  image `ghcr.io/autc04/retro68`. Docker pulls the image the first time (about 1.5 GB) and it
+  needs no Apple files, because it uses the open-source multiversal interfaces. Docker is the
+  only thing to install.
+- `native`: require Retro68 on `PATH`, for example
+  `export PATH=$RETRO68_BUILD/toolchain/bin:$PATH`.
+- `container`: always use the Docker image (`MAC68K_IMAGE` overrides the image name).
 
 ### For Palm OS builds:
 - Install [palmdev-toolchain](https://github.com/mozzwald/palmdev-toolchain)

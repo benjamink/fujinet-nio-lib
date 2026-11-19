@@ -67,9 +67,19 @@ test-palmos-build:
 	python3 -m unittest discover -s tests -p 'test_palmos_build.py' -v
 test: test-palmos-build
 
-$(filter-out palmos-serial palmos-springboard,$(TARGETS) $(EXTRA_TARGETS)):
+.PHONY: test-mac68k-build
+test-mac68k-build:
+	python3 -m unittest discover -s tests -p 'test_mac68k_build.py' -v
+test: test-mac68k-build
+
+$(filter-out palmos-serial palmos-springboard mac68k,$(TARGETS) $(EXTRA_TARGETS)):
 	@echo "Building for $@..."
 	$(MAKE) -f makefiles/build.mk TARGET=$@ PROGRAM=$(PROGRAM) lib
+
+# Classic Macintosh: Retro68 from PATH, or its Docker image when it is not installed (MAC68K_BUILDER).
+mac68k:
+	@echo "Building for $@..."
+	bash scripts/mac68k-build.sh $(MAKE) -f makefiles/build.mk TARGET=$@ PROGRAM=$(PROGRAM) lib
 
 palmos-serial palmos-springboard:
 	bash scripts/palmos-build.sh $(MAKE) -f makefiles/build.mk TARGET=$@ PROGRAM=$(PROGRAM) $(if $(SBNIO_ABI_INCLUDE),SBNIO_ABI_INCLUDE="$(SBNIO_ABI_INCLUDE)") lib
@@ -355,6 +365,7 @@ help:
 	@echo "  SBNIO_ABI_INCLUDE - -I path to sbnio.h for palmos-springboard"
 	@echo "  PALMOS_SDK_VERSION - 3.1 (default) or optional 3.5"
 	@echo "  PALMOS_BUILDER - auto (default), native, or container"
+	@echo "  MAC68K_BUILDER - auto (default), native, or container (Retro68 in Docker)"
 	@echo "  PALMDEV_TOOLCHAIN - installed palmdev-toolchain checkout"
 	@echo ""
 	@echo "Output:"
