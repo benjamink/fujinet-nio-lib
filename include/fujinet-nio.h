@@ -900,7 +900,10 @@ void fn_write_get_last_diagnostics(fn_write_diagnostics_t *diagnostics);
 /* While an exchange is in flight, each time a signal in `signals` arrives
  * the library calls hook(ctx).  Nonzero aborts the request (AbortIO, then
  * WaitIO) and the call returns FN_ERR_ABORTED with no response.  hook NULL
- * or signals 0 restores plain DoIO.  One hook per process. */
+ * or signals 0 restores plain DoIO.  One hook per process.  An exchange
+ * started from inside the hook uses plain DoIO and never re-enters it.
+ * Hook signals that arrive together with the reply are re-raised with
+ * SetSignal() so the caller's event loop still sees them. */
 typedef int (*fn_amiga_wait_hook_t)(void *ctx);
 void fn_amiga_set_wait_hook(uint32_t signals, fn_amiga_wait_hook_t hook, void *ctx);
 

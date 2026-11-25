@@ -37,6 +37,7 @@ static struct fn_amiga_transport g_transport;
 static ULONG g_wait_signals;
 static fn_amiga_wait_hook_t g_wait_hook;
 static void *g_wait_ctx;
+static int g_in_hook;
 
 void fn_amiga_set_wait_hook(uint32_t signals, fn_amiga_wait_hook_t hook, void *ctx)
 {
@@ -195,7 +196,7 @@ uint8_t fn_transport_exchange_buffers(const uint8_t *request,
     req.fn_io.io_Device = g_transport.req.fn_io.io_Device;
     req.fn_io.io_Unit = g_transport.req.fn_io.io_Unit;
     prepare_exchange(&req, request, request_length, response, response_capacity);
-    if (g_wait_hook == NULL || g_wait_signals == 0) {
+    if (g_wait_hook == NULL || g_wait_signals == 0 || g_in_hook) {
         (void)DoIO(&req.fn_io);
     } else {
         /* Interruptible exchange: SendIO then wait on the reply port plus
@@ -205,20 +206,33 @@ uint8_t fn_transport_exchange_buffers(const uint8_t *request,
         ULONG signals = g_wait_signals;
         fn_amiga_wait_hook_t hook = g_wait_hook;
         void *ctx = g_wait_ctx;
+        ULONG pending = 0;
 
         SendIO(&req.fn_io);
         for (;;) {
             ULONG got = Wait(portmask | signals);
 
-            if (CheckIO(&req.fn_io) != NULL)
+            if (CheckIO(&req.fn_io) != NULL) {
+                /* Wait() cleared these; the hook never saw them. */
+                pending = got & signals;
                 break;
-            if ((got & signals) != 0 && hook(ctx) != 0) {
-                AbortIO(&req.fn_io);
-                aborted = 1;
-                break;
+            }
+            if ((got & signals) != 0) {
+                int stop;
+
+                g_in_hook = 1;
+                stop = hook(ctx);
+                g_in_hook = 0;
+                if (stop != 0) {
+                    AbortIO(&req.fn_io);
+                    aborted = 1;
+                    break;
+                }
             }
         }
         WaitIO(&req.fn_io);
+        if (pending != 0)
+            (void)SetSignal(pending, pending);
     }
     last_broker_stage = req.fn_pad[0];
     last_broker_result = req.fn_pad[1];

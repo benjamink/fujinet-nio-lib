@@ -148,8 +148,18 @@ ULONG Wait(ULONG signalSet)
     return g_last_wait_result;
 }
 
+static ULONG g_setsignal_bits;
+
+ULONG SetSignal(ULONG newSignals, ULONG signalSet)
+{
+    (void)newSignals;
+    g_setsignal_bits |= signalSet;
+    return 0;
+}
+
 static void reset_stubs(void)
 {
+    g_setsignal_bits = 0;
     fn_amiga_set_wait_hook(0, NULL, NULL);
     g_sendio_count = 0;
     g_wait_call_count = 0;
@@ -486,6 +496,53 @@ static void test_hook_reply_first(void)
     CHECK("port released", g_delete_port_count == 1);
 }
 
+static void test_hook_reply_and_signal_together(void)
+{
+    uint8_t req[1] = {0}, resp[8];
+    uint16_t len = 0;
+
+    hook_setup();
+    fn_amiga_set_wait_hook(HOOK_SIG, test_hook, NULL);
+    g_wait_script[0] = 1u | HOOK_SIG;
+    g_wait_script_len = 1;
+    CHECK("ok",
+          fn_transport_exchange_buffers(req, 1, resp, sizeof(resp), &len) == FN_OK);
+    CHECK("hook not called", g_hook_calls == 0);
+    CHECK("no abort", g_abort_count == 0);
+    CHECK("hook signal re-raised", g_setsignal_bits == HOOK_SIG);
+}
+
+static int nested_result;
+static int nested_hook(void *ctx)
+{
+    uint8_t req[1] = {0}, resp[8];
+    uint16_t len = 0;
+
+    (void)ctx;
+    ++g_hook_calls;
+    g_doio_count = 0;
+    nested_result = fn_transport_exchange_buffers(req, 1, resp, sizeof(resp), &len);
+    return 0;
+}
+
+static void test_hook_not_reentered(void)
+{
+    uint8_t req[1] = {0}, resp[8];
+    uint16_t len = 0;
+
+    hook_setup();
+    fn_amiga_set_wait_hook(HOOK_SIG, nested_hook, NULL);
+    g_wait_script[0] = HOOK_SIG;
+    g_wait_script[1] = 1u;
+    g_wait_script_len = 2;
+    CHECK("ok",
+          fn_transport_exchange_buffers(req, 1, resp, sizeof(resp), &len) == FN_OK);
+    CHECK("hook once", g_hook_calls == 1);
+    CHECK("nested ok", nested_result == FN_OK);
+    CHECK("nested used DoIO", g_doio_count == 1);
+    CHECK("only outer SendIO", g_sendio_count == 1);
+}
+
 static void test_hook_keeps_waiting(void)
 {
     uint8_t req[1] = {0}, resp[8];
@@ -530,6 +587,8 @@ int main(void)
 {
     test_hook_unset_uses_doio();
     test_hook_reply_first();
+    test_hook_reply_and_signal_together();
+    test_hook_not_reentered();
     test_hook_keeps_waiting();
     test_hook_aborts();
     test_init_opens_broker();

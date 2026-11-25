@@ -13,5 +13,6 @@ void WaitIO(struct IORequest *ioRequest);
 void SendIO(struct IORequest *ioRequest);
 struct IORequest *CheckIO(struct IORequest *ioRequest);
 ULONG Wait(ULONG signalSet);
+ULONG SetSignal(ULONG newSignals, ULONG signalSet);
 
 #endif
