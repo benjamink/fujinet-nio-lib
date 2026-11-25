@@ -10,5 +10,8 @@ void CloseDevice(struct IORequest *ioRequest);
 BYTE DoIO(struct IORequest *ioRequest);
 void AbortIO(struct IORequest *ioRequest);
 void WaitIO(struct IORequest *ioRequest);
+void SendIO(struct IORequest *ioRequest);
+struct IORequest *CheckIO(struct IORequest *ioRequest);
+ULONG Wait(ULONG signalSet);
 
 #endif

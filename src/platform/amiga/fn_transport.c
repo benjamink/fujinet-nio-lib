@@ -34,6 +34,16 @@ struct fn_amiga_transport {
 };
 
 static struct fn_amiga_transport g_transport;
+static ULONG g_wait_signals;
+static fn_amiga_wait_hook_t g_wait_hook;
+static void *g_wait_ctx;
+
+void fn_amiga_set_wait_hook(uint32_t signals, fn_amiga_wait_hook_t hook, void *ctx)
+{
+    g_wait_signals = signals;
+    g_wait_hook = hook;
+    g_wait_ctx = ctx;
+}
 static uint8_t last_broker_stage;
 static uint8_t last_broker_result;
 static uint8_t last_broker_cause;
@@ -156,6 +166,7 @@ uint8_t fn_transport_exchange_buffers(const uint8_t *request,
     struct MsgPort *port;
     struct FujiNetNIORequest req;
     uint8_t result;
+    int aborted = 0;
 
     if (response_length != NULL)
         *response_length = 0;
@@ -184,12 +195,42 @@ uint8_t fn_transport_exchange_buffers(const uint8_t *request,
     req.fn_io.io_Device = g_transport.req.fn_io.io_Device;
     req.fn_io.io_Unit = g_transport.req.fn_io.io_Unit;
     prepare_exchange(&req, request, request_length, response, response_capacity);
-    (void)DoIO(&req.fn_io);
+    if (g_wait_hook == NULL || g_wait_signals == 0) {
+        (void)DoIO(&req.fn_io);
+    } else {
+        /* Interruptible exchange: SendIO then wait on the reply port plus
+         * the caller's signals.  The request is never touched before
+         * WaitIO, even after AbortIO (the device may still complete it). */
+        ULONG portmask = 1UL << port->mp_SigBit;
+        ULONG signals = g_wait_signals;
+        fn_amiga_wait_hook_t hook = g_wait_hook;
+        void *ctx = g_wait_ctx;
+
+        SendIO(&req.fn_io);
+        for (;;) {
+            ULONG got = Wait(portmask | signals);
+
+            if (CheckIO(&req.fn_io) != NULL)
+                break;
+            if ((got & signals) != 0 && hook(ctx) != 0) {
+                AbortIO(&req.fn_io);
+                aborted = 1;
+                break;
+            }
+        }
+        WaitIO(&req.fn_io);
+    }
     last_broker_stage = req.fn_pad[0];
     last_broker_result = req.fn_pad[1];
     last_broker_cause = req.fn_pad[2];
     last_native_error = (uint8_t)(req.fn_flags & 0xFF);
     last_native_status = (uint16_t)(req.fn_flags >> 8);
+
+    if (aborted) {
+        DeletePort(port);
+        *response_length = 0;
+        return FN_ERR_ABORTED;
+    }
 
     if (req.fn_io.io_Error != 0) {
         result = map_native_io_error(req.fn_io.io_Error);

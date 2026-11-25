@@ -116,8 +116,46 @@ void WaitIO(struct IORequest *ioRequest)
     ++g_wait_count;
 }
 
+static unsigned g_sendio_count;
+static unsigned g_wait_call_count;
+static ULONG g_wait_script[8];
+static unsigned g_wait_script_len;
+static ULONG g_last_wait_mask;
+static ULONG g_last_wait_result;
+
+void SendIO(struct IORequest *ioRequest)
+{
+    struct FujiNetNIORequest *req = (struct FujiNetNIORequest *)ioRequest;
+
+    ++g_sendio_count;
+    req->fn_io.io_Error = g_doio_error;
+    req->fn_nio_error = g_doio_nio_error;
+    req->fn_response_length = g_doio_resp_len;
+}
+
+/* Done once the most recent Wait() reported the reply port bit (bit 0). */
+struct IORequest *CheckIO(struct IORequest *ioRequest)
+{
+    return (g_last_wait_result & 1u) ? ioRequest : NULL;
+}
+
+ULONG Wait(ULONG signalSet)
+{
+    g_last_wait_mask = signalSet;
+    g_last_wait_result = g_wait_call_count < g_wait_script_len
+                             ? g_wait_script[g_wait_call_count] : 1u;
+    ++g_wait_call_count;
+    return g_last_wait_result;
+}
+
 static void reset_stubs(void)
 {
+    fn_amiga_set_wait_hook(0, NULL, NULL);
+    g_sendio_count = 0;
+    g_wait_call_count = 0;
+    g_wait_script_len = 0;
+    g_last_wait_mask = 0;
+    g_last_wait_result = 0;
     fn_transport_close();
     g_open_fail = 0;
     g_port_fail = 0;
@@ -385,8 +423,115 @@ static void test_other_io_error(void)
     CHECK("resp_len 0", resp_len == 0);
 }
 
+#define HOOK_SIG 0x100u
+static unsigned g_hook_calls;
+static int g_hook_answer;
+static void *g_hook_ctx_seen;
+
+static int test_hook(void *ctx)
+{
+    ++g_hook_calls;
+    g_hook_ctx_seen = ctx;
+    return g_hook_answer;
+}
+
+static void hook_setup(void)
+{
+    reset_stubs();
+    g_hook_calls = 0;
+    g_hook_answer = 0;
+    g_hook_ctx_seen = NULL;
+    CHECK("init", fn_transport_init() == FN_OK);
+    g_doio_resp_len = 5;
+}
+
+static void test_hook_unset_uses_doio(void)
+{
+    uint8_t req[1] = {0}, resp[8];
+    uint16_t len = 99;
+
+    hook_setup();
+    CHECK("exchange ok",
+          fn_transport_exchange_buffers(req, 1, resp, sizeof(resp), &len) == FN_OK);
+    CHECK("doio once", g_doio_count == 1);
+    CHECK("no SendIO", g_sendio_count == 0);
+    fn_amiga_set_wait_hook(HOOK_SIG, test_hook, NULL);
+    fn_amiga_set_wait_hook(0, test_hook, NULL);
+    g_doio_count = 0;
+    CHECK("signals 0 ok",
+          fn_transport_exchange_buffers(req, 1, resp, sizeof(resp), &len) == FN_OK);
+    CHECK("signals 0 uses DoIO", g_doio_count == 1 && g_sendio_count == 0);
+}
+
+static void test_hook_reply_first(void)
+{
+    uint8_t req[1] = {0}, resp[8];
+    uint16_t len = 99;
+    int ctx;
+
+    hook_setup();
+    fn_amiga_set_wait_hook(HOOK_SIG, test_hook, &ctx);
+    g_wait_script[0] = 1u;
+    g_wait_script_len = 1;
+    CHECK("ok",
+          fn_transport_exchange_buffers(req, 1, resp, sizeof(resp), &len) == FN_OK);
+    CHECK("len", len == 5);
+    CHECK("hook never called", g_hook_calls == 0);
+    CHECK("no abort", g_abort_count == 0);
+    CHECK("no DoIO", g_doio_count == 0);
+    CHECK("SendIO once", g_sendio_count == 1);
+    CHECK("waited on port and hook signals",
+          (g_last_wait_mask & HOOK_SIG) != 0 && (g_last_wait_mask & 1u) != 0);
+    CHECK("WaitIO once", g_wait_count == 1);
+    CHECK("port released", g_delete_port_count == 1);
+}
+
+static void test_hook_keeps_waiting(void)
+{
+    uint8_t req[1] = {0}, resp[8];
+    uint16_t len = 0;
+    int ctx;
+
+    hook_setup();
+    fn_amiga_set_wait_hook(HOOK_SIG, test_hook, &ctx);
+    g_wait_script[0] = HOOK_SIG;
+    g_wait_script[1] = HOOK_SIG;
+    g_wait_script[2] = 1u;
+    g_wait_script_len = 3;
+    CHECK("ok",
+          fn_transport_exchange_buffers(req, 1, resp, sizeof(resp), &len) == FN_OK);
+    CHECK("len", len == 5);
+    CHECK("hook called twice", g_hook_calls == 2);
+    CHECK("ctx passed", g_hook_ctx_seen == &ctx);
+    CHECK("no abort", g_abort_count == 0);
+}
+
+static void test_hook_aborts(void)
+{
+    uint8_t req[1] = {0}, resp[8];
+    uint16_t len = 99;
+
+    hook_setup();
+    fn_amiga_set_wait_hook(HOOK_SIG, test_hook, NULL);
+    g_hook_answer = 1;
+    g_wait_script[0] = HOOK_SIG;
+    g_wait_script_len = 1;
+    CHECK("aborted",
+          fn_transport_exchange_buffers(req, 1, resp, sizeof(resp), &len) ==
+              FN_ERR_ABORTED);
+    CHECK("len 0", len == 0);
+    CHECK("abort once", g_abort_count == 1);
+    CHECK("WaitIO once", g_wait_count == 1);
+    CHECK("hook once", g_hook_calls == 1);
+    CHECK("port released", g_delete_port_count == 1);
+}
+
 int main(void)
 {
+    test_hook_unset_uses_doio();
+    test_hook_reply_first();
+    test_hook_keeps_waiting();
+    test_hook_aborts();
     test_init_opens_broker();
     test_port_alloc_fail();
     test_broker_absent();

@@ -7,7 +7,7 @@ OUT="$ROOT/build/tests/amiga_transport_host_test"
 
 mkdir -p "$(dirname "$OUT")"
 gcc -std=c99 -Wall -Wextra -Werror \
-    -DFN_AMIGA_EXPLICIT_LIFECYCLE \
+    -D__AMIGA__ -DFN_AMIGA_EXPLICIT_LIFECYCLE \
     -I"$ROOT/tests/amiga_transport_stubs" \
     -I"$ROOT/include" \
     -I"$DRIVER_INCLUDE" \
