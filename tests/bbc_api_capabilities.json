@@ -1,4 +1,5 @@
 {
+  "fn_amiga_set_wait_hook": "other-platform",
   "fn_amiga_transport_last_broker_cause": "other-platform",
   "fn_amiga_transport_last_broker_detail": "other-platform",
   "fn_amiga_transport_last_serial_detail": "other-platform",
