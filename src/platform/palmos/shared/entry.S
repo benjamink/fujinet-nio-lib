@@ -1,4 +1,4 @@
-/* Entry must be the first bytes of libr/0. All targets are in this resource. */
+/* Entry must be the first bytes of libr/0. All targets are in this resource. ABI 1.7. */
     .text
     .globl start
 start:
@@ -78,6 +78,8 @@ NioLibDispatch:
     .word NioLibDiskInspect - NioLibDispatch
     .word NioLibFujiGetHsio - NioLibDispatch
     .word NioLibFujiSetHsio - NioLibDispatch
+    .word NioLibGetNetLibStatus - NioLibDispatch
+    .word NioLibNetLibHangup - NioLibDispatch
 NioLibName:
     .asciz "NioLib"
     .even

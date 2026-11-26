@@ -410,6 +410,7 @@ class ServiceTests(unittest.TestCase):
         self.call('fn_shutdown')
         header = (f.ROOT / 'include/palmos/NioLibServices.h').read_text()
         names = re.findall(r'Err (NioLib\w+)\(', header)
+        names += ['NioLibGetNetLibStatus', 'NioLibNetLibHangup']  # ABI 1.7, in NioLib.h
         for name in names:
             self.assertEqual(self.m.call(name, struct.pack('>H', 7)), 0x8002, name)
         self.assertEqual(self.call('fn_init'), 0)
@@ -428,8 +429,10 @@ class ServiceTests(unittest.TestCase):
     def test_services_require_both_version_and_capability(self):
         out = self.alloc()
         self.call('fn_shutdown')
+        # The last: an unpublished Network-transport build, ABI 1.6 with bit 0x200, whose traps from 19 on differ.
         for version, caps in (((8, 1, 6, 9), 0x800000ff),
-                              ((8, 1, 5, 8), 0x800001ff)):
+                              ((8, 1, 5, 8), 0x800001ff),
+                              ((8, 1, 6, 12), 0x800003ff)):
             self.m.service_version, self.m.service_caps = version, caps
             self.assertEqual(self.call('fn_init'), 0)
             before = len(self.m.requests)

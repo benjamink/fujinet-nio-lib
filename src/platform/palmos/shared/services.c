@@ -296,7 +296,7 @@ SERVICE(NioLibResetTransport,
     (void)refNum;
     if (confirmation != nioRecoveryPeerReset ||
         (transport != nioTransportSpringboard && transport != nioTransportSerial &&
-         transport != nioTransportUSB)) return nioLibErrParam;
+         transport != nioTransportUSB && transport != nioTransportNetwork)) return nioLibErrParam;
     if (!nl_client_idle() || nl_active()) return nioLibErrBusy;
     if (nl_can_close()) return nioLibErrBusy;
     nl_busy = 1;
@@ -304,4 +304,23 @@ SERVICE(NioLibResetTransport,
     if (!result) nl_uncertain_operation = 0;
     nl_busy = 0;
     return result;
+}
+
+/* ABI 1.7: the Network transport's status, for NIO Config. Needs Open, not a client session. */
+SERVICE(NioLibGetNetLibStatus,
+        (UInt16 refNum, NioLibNetLibStatus *s), (refNum, s))
+{
+    (void)refNum;
+    if (!s || s->size != sizeof(*s)) return nioLibErrParam;
+    if (nl_busy) return nioLibErrBusy;
+    nl_transport_netlib_status(s);
+    return errNone;
+}
+
+/* ABI 1.7: NIO Config's Hang up. */
+SERVICE(NioLibNetLibHangup, (UInt16 refNum), (refNum))
+{
+    (void)refNum;
+    if (!nl_client_idle() || nl_active()) return nioLibErrBusy;
+    return nl_transport_netlib_hangup();
 }

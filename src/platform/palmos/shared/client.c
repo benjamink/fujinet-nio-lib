@@ -61,7 +61,10 @@ static uint8_t load_library(void)
         return FN_ERR_UNSUPPORTED;
     }
     client_status_api = version.abiMinor >= 2 && (caps & nioLibCapTransports);
-    client_services_api = version.abiMinor >= 6 && (caps & nioLibCapServices);
+    /* An unpublished Network-transport build (implementations 9-12) said ABI 1.6 with nioLibCapNetLib's bit:
+     * its traps from 19 on are not the 1.6 services. */
+    client_services_api = version.abiMinor >= 6 && (caps & nioLibCapServices) &&
+        (version.abiMinor >= 7 || !(caps & nioLibCapNetLib));
     client_json_api = version.abiMinor >= 4 && (caps & nioLibCapJSONQuery);
     err = NioLibOpen(nl_client_ref);
     if (err) { palm_error = err; release_library(); return FN_ERR_IO; }

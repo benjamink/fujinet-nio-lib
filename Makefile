@@ -26,7 +26,7 @@ override PROGRAM := fujinet-nio
 .PHONY: all clean help disk-bbc disk-bbc-clib test-legacy test-mount-resolve \
 	test-appstore-read test-list-pages test-slot-catalog test-bbc test-bbc-scripted \
 	test-bbc-real test-fuji test-wifi test-disk test-disk-context test-session test-stream-wake test-open-ext test-open-wire test-ready-wire test-write-partial test-library-link \
-	test-amiga-transport test-c64-transport test-palmos-transport test-mac68k-transport test-atari-transport test-atari-hsio test-atari-proc test-atari-read-profile test-atari-list-pages test-atari-appkey-uri test-atari-parse-read test-atari-client-buffers test-atari-network-read test-atari-network-write test-atari-network-open test-atari-compact test-raw-transport-retry test \
+	test-amiga-transport test-c64-transport test-palmos-transport test-palmos-netlib test-mac68k-transport test-atari-transport test-atari-hsio test-atari-proc test-atari-read-profile test-atari-list-pages test-atari-appkey-uri test-atari-parse-read test-atari-client-buffers test-atari-network-read test-atari-network-write test-atari-network-open test-atari-compact test-raw-transport-retry test \
 	test-all-build check check-palmos msdos $(TARGETS) $(EXTRA_TARGETS)
 
 # Default target: build all
@@ -237,6 +237,10 @@ test-palmos-transport:
 	@echo "Running Palm OS Springboard transport host tests..."
 	bash ./tests/run_palmos_transport_host_test.sh
 
+test-palmos-netlib:
+	@echo "Running Palm OS Network transport (NetLib) core host tests..."
+	bash ./tests/run_palmos_netlib_host_test.sh
+
 test-atari-transport:
 	@echo "Running Atari assembled SIOV/DCB transport test..."
 	bash ./tests/run_atari_transport_sim_test.sh
@@ -286,7 +290,7 @@ test-release:
 
 test: test-fuji-hsio test-package-atari test-release
 
-test: test-u1mb-clear test-library-link test-legacy test-mount-resolve test-appstore-read test-list-pages test-atari-list-pages test-atari-appkey-uri test-atari-parse-read test-atari-client-buffers test-atari-network-read test-atari-network-write test-atari-network-open test-slot-catalog test-fuji test-wifi test-disk test-disk-context test-session test-stream-wake test-open-ext test-open-wire test-ready-wire test-large-read test-write-partial test-amiga-transport test-c64-transport test-palmos-transport test-mac68k-transport test-atari-transport test-atari-hsio test-atari-proc test-atari-read-profile test-atari-compact test-raw-transport-retry
+test: test-u1mb-clear test-library-link test-legacy test-mount-resolve test-appstore-read test-list-pages test-atari-list-pages test-atari-appkey-uri test-atari-parse-read test-atari-client-buffers test-atari-network-read test-atari-network-write test-atari-network-open test-slot-catalog test-fuji test-wifi test-disk test-disk-context test-session test-stream-wake test-open-ext test-open-wire test-ready-wire test-large-read test-write-partial test-amiga-transport test-c64-transport test-palmos-transport test-palmos-netlib test-mac68k-transport test-atari-transport test-atari-hsio test-atari-proc test-atari-read-profile test-atari-compact test-raw-transport-retry
 
 # Fast required change check: compile every configured target, then run the
 # host-side tests and public archive-link test. Keep this as a recipe rather
@@ -337,6 +341,7 @@ help:
 	@echo "  make test-amiga-transport - Run Amiga broker-client host tests"
 	@echo "  make test-stream-wake - Run stream transport idle-reclaim tests"
 	@echo "  make test-palmos-transport - Run Palm OS Springboard client host tests"
+	@echo "  make test-palmos-netlib - Run Palm OS Network transport (NetLib) core host tests"
 	@echo "  make test-mac68k-transport - Run classic Macintosh HD20 mailbox host tests"
 	@echo "  make palmos-shared - Build NioLib.prc and NioLibTest.prc (prc-tools)"
 	@echo "  make check-palmos - Palm OS targets, NioLib and its m68k tests (needs the Palm toolchain)"

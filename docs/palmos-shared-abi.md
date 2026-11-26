@@ -10,7 +10,7 @@ See the [shared-library guide](palmos-shared-library.md) for build and lifecycle
 | --- | --- |
 | Library database / type / creator | `NioLib` / `libr` / `NiL1` |
 | Diagnostic application / creator | `NioLibTest` / `NiT1` |
-| ABI major.minor / implementation | **1.6 / 9** |
+| ABI major.minor / implementation | **1.7 / 13** |
 | Scalar layout | Palm fixed-width UInt16/UInt32, native big-endian, 2-byte alignment |
 
 Find with `SysLibFind`, load with `SysLibLoad` if missing, query version and
@@ -19,6 +19,7 @@ Reject a different major or missing required capabilities; negotiate minor
 features before calling their traps. A newer minor preserves existing ordinals
 and structures. The networking client accepts ABI >=1.1; configuration requires
 >=1.2; USB needs `nioLibCapUSB`; cached JSON query needs >=1.4 plus its capability.
+The Network transport's calls need >=1.7 plus `nioLibCapNetLib`.
 ABI 1.0 foundation clients remain compatible but cannot use networking.
 
 | Capability | Bit |
@@ -32,6 +33,7 @@ ABI 1.0 foundation clients remain compatible but cannot use networking.
 | Cached JSON selector | `0x40` |
 | Confirmed idle transport recovery | `0x80` |
 | Extended services | `0x100` |
+| Network transport over NetLib (ABI 1.7) | `0x200` |
 | Foundation globals diagnostics (`TestOnly`, legacy `TestGlobals` alias) | `0x80000000` |
 
 The diagnostics bit describes retained test entry points; the library also
@@ -68,6 +70,9 @@ scalars are range-checked before narrowing to the common API.
 | `0xA815` | GetTransportStatus |
 | `0xA816` | NetJsonQuery |
 | `0xA817` | ResetTransport (ABI 1.5) |
+| `0xA818`–`0xA847` | ABI 1.6 services (below) |
+| `0xA848` | GetNetLibStatus (ABI 1.7) |
+| `0xA849` | NetLibHangup (ABI 1.7) |
 
 Direct service traps return Palm `Err` and a separate `FN_*` output. Balanced
 Close requires a remaining-count pointer; only a successful zero result permits
@@ -85,7 +90,8 @@ UInt32 serialBaud;
 UInt32 reserved[3];
 ```
 
-Transport IDs are **1=Springboard**, **2=Serial**, **3=USB**. Serial options are
+Transport IDs are **1=Springboard**, **2=Serial**, **3=USB**, and from ABI 1.7
+**4=Network** (no hardware: the NIO device runs inside NioLib over NetLib). Serial options are
 zero or `nioSerialRTSCTS=1`; baud is 9600, 19200, 38400, 57600 or 115200.
 Reserved fields must be zero. Missing settings produce Springboard/115200/no-flow
 defaults without writing preferences. Invalid sizes/versions/values return the
@@ -105,7 +111,8 @@ reset clears it. A CS1 marker that cannot be read (any Feature Manager error but
 markers to force a retry.
 
 `NioLibResetTransport(refNum, transport, confirmation)` requires an open library,
-ABI >=1.5 and capability `0x80`. Transport must be 1, 2 or 3; confirmation must
+ABI >=1.5 and capability `0x80`. Transport must be 1, 2, 3 or (ABI 1.7) 4, which
+holds nothing between sessions and so has nothing to clear; confirmation must
 equal `nioRecoveryPeerReset` (1), after the operator retired the peer's old
 handles and buffered replies. USB requires a physical reconnect. Active clients,
 backends or unreleasable driver resources cause Busy. Invalid arguments cause
@@ -168,3 +175,35 @@ link the client archive alone when using installed NioLib. Caller-supplied
 transport callback/context APIs remain static integration interfaces, not new
 shared traps. Raw NetworkService calls are explicitly unsupported through the
 shared interface because they bypass owned session bookkeeping.
+
+## ABI 1.7: the Network transport
+
+ABI 1.7 is this branch's addition on top of 1.6. It leaves every 1.6 trap,
+ordinal, capability bit and structure as it is, and appends:
+
+| Item | Value |
+| --- | --- |
+| Capability | `nioLibCapNetLib` (`0x200`) |
+| Transport ID | `nioTransportNetwork` (4) |
+| `0xA848` | `NioLibGetNetLibStatus(refNum, NioLibNetLibStatus *)` |
+| `0xA849` | `NioLibNetLibHangup(refNum)` |
+
+Both calls need ABI >=1.7 and `nioLibCapNetLib`, and an Open library, not a
+client session. `NioLibNetLibStatus` (36 bytes, `size` set by the caller) holds
+flags (`nioNetLibPresent` 1, `nioNetLibUp` 2, `nioNetLibSession` 4), the open
+sessions, the connection and failure counts, bytes in and out, and the Palm's
+address as text. During a client session its counters are that session's;
+otherwise they are the last session's. GetNetLibStatus returns Busy while a
+trap is running. NetLibHangup returns Busy while a client session or anything
+else has NetLib open.
+
+The Network transport serves the typed 1.6 calls the core implements (network
+Open/Read/Write/Close/Info, Fuji information, Wi-Fi status and configuration)
+through the same packet path as the hardware transports; the other services
+answer Unsupported from the core. `RawCall` is the raw packet entry point for
+this transport too.
+
+Unpublished Network-transport builds (implementations 9–12) reported ABI 1.6
+with bits `0x100` and `0x200` and had their own traps at `0xA818`–`0xA81A`. A
+client must not use the 1.6 services when a library reports ABI 1.6 with
+`0x200`; the client archive and NIO Config refuse them there.

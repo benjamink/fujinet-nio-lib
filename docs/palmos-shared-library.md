@@ -130,7 +130,7 @@ using earlier compatible traps need no rebuild merely to select USB.
 
 ## Application contract
 
-Current identity is **NioLib / libr / NiL1**, ABI **1.6**, implementation **9**.
+Current identity is **NioLib / libr / NiL1**, ABI **1.7**, implementation **13**.
 See [ABI reference](palmos-shared-abi.md) for capabilities, traps and preferences.
 The client supports networking libraries from ABI 1.1 onward, negotiates optional
 functions, and returns Unsupported instead of calling an unknown JSON trap.
@@ -163,6 +163,7 @@ and the cleanup report through `NioLibClient.h`.
 | 1 | Handspring Springboard CS1, RP2350 module and its separate NIO host link | Raw canonical FujiBus packets over 16-bit registers |
 | 2 | Physical serial cradle/cable and an NIO SLIP backend | Common stream session + SLIP |
 | 3 | Handspring USB cradle, HsUs library and a compatible USB Host backend | Raw canonical FujiBus packets on Generic Port 2 |
+| 4 | Network (ABI 1.7): no FujiNet hardware; the NIO device runs inside NioLib and reaches the Internet through the Palm's NetLib | Packets handled in the library by the NIO core in `shared/netlib/` |
 
 Springboard is the default when no saved preference exists. The backend is
 fixed at BeginClient until EndClient. Configuration/status inspection and saving
@@ -321,6 +322,30 @@ use explicit offsets, fit one packet, and do not add automatic retries. Offset
 zero writes create/truncate; callers must handle partial acceptance and ambiguous
 errors. PRC installation remains application-owned Palm OS work.
 
-The new ABI preserves existing trap ordinals and uses implementation identity 9.
+ABI 1.6 preserved the existing trap ordinals with implementation identity 9;
+ABI 1.7 (implementation 15) adds the Network transport below.
 It retains PR #11 transport behavior and has not yet been qualified on hardware.
 Do not pair these public traps with the earlier private PR11 benchmark adapters.
+
+## Network transport (ABI 1.7)
+
+For a Palm with a network but no FujiNet: a Sony Clie with PPP over Bluetooth to a gateway, a Palm with Wi-Fi, a
+modem or a cradle. NioLib runs the NIO device itself (`src/platform/palmos/shared/netlib/`, the C core from
+fujinet-nio-palmOS: NetworkDevice `tcp://` and `http://`, FujiDevice info, WiFiDevice status and configuration) and
+opens sockets with NetLib, which dials whatever service the Network preferences select. HTTPS, redirects,
+translation, UDP, clock and files are not implemented there; those calls answer Unsupported. A request body of
+unknown length is limited to 1 KB. A URL or request header holding a control character (or a space in the URL, or a
+`:` or space in a header name) is refused as Invalid before any connection, so a value cannot add header lines. A body
+shorter than its Content-Length ends in an IO error, after the bytes that did arrive; a body with no Content-Length
+ends at the server's close. The core's state (about 6 KB) is allocated for each client session only. Select
+it in NIO Config.
+
+The typed 1.6 calls (`fn_fuji_get_info`, `fn_wifi_get_status`, `fn_raw_call`, ...) reach the core through the same
+packet path as the hardware transports. ABI 1.7 adds `NioLibGetNetLibStatus` / `NioLibNetLibHangup` for NIO Config,
+behind `nioLibCapNetLib`. Between sessions the status's counters are the last session's, and the link counts as up
+while NetLib is open or in its close-wait (the link kept for its idle time after everyone closed it); checking the
+close-wait never dials, but starts the idle time over. Hang up closes a link in its close-wait at once, and answers
+`nioLibErrBusy` while anything still has NetLib open.
+
+A build without the Handspring SDK (no `UsbMgr.h` in `HANDSPRING_INCLUDE`) builds `usb.o` from `usb_none.c`: it has
+no USB backend and does not report `nioLibCapUSB`.

@@ -74,6 +74,18 @@ endif
 $(PADOBJ): tests/palmos_layout_padding.S $(B)/settings | $(B)
 	$(CC) $(LIBFLAGS) -DNL_LAYOUT_PAD_BYTES=$(PALMOS_LAYOUT_PAD_BYTES) -c $< -o $@
 endif
+# The Network transport: the NIO device itself, running in the library over NetLib (netlib/).
+NETLIB = nio_core nio_net nio_fuji nio_sock_palm
+NETLIBOBJS = $(B)/netlib.o $(addprefix $(B)/netlib/,$(addsuffix .o,$(NETLIB)))
+# USB needs the Handspring SDK's UsbMgr.h. Without it usb.o is built from usb_none.c: no USB backend, and the
+# library does not claim nioLibCapUSB.
+ifeq ($(wildcard $(HANDSPRING_INCLUDE)/UsbMgr.h),)
+USBSRC = $(S)/usb_none.c
+USBDEF = -DNL_NO_USB
+else
+USBSRC = $(S)/usb.c
+USBINC = -I"$(HANDSPRING_INCLUDE)"
+endif
 BACKEND = fn_palmos_open fn_palmos_close fn_palmos_state
 BACKOBJS = $(addprefix $(B)/backend/,$(addsuffix .o,$(BACKEND))) $(B)/backend/fn_palmos_exchange.o $(B)/backend/transport_cs1.o
 
@@ -85,12 +97,12 @@ all: verify
 $(B)/settings: FORCE | $(B)
 	@printf '%s\n' '$(CC) $(LIBFLAGS) $(HANDSPRING_INCLUDE) $(PALMOS_LAYOUT_PAD_BYTES) $(PALMOS_LAYOUT_PAD_POSITION)' > $@.tmp
 	@cmp -s $@.tmp $@ && rm $@.tmp || mv $@.tmp $@
-$(B)/entry.o $(B)/library.o $(B)/image.o $(B)/owner.o $(B)/services.o $(B)/json.o $(B)/cs1.o $(B)/transport.o $(B)/serial.o $(B)/usb.o $(B)/test.o $(B)/registers.o $(B)/client.o $(COREOBJS) $(SERVICECOREOBJS) $(DISKCOREOBJS) $(BACKOBJS) $(SERVICEOBJS) $(CLIENTOBJS) $(CLIENTCOMMONOBJS) $(LEGACYOBJS): $(B)/settings $(wildcard include/palmos/*.h)
+$(B)/entry.o $(B)/library.o $(B)/image.o $(B)/owner.o $(B)/services.o $(B)/json.o $(B)/cs1.o $(B)/transport.o $(B)/serial.o $(B)/usb.o $(B)/test.o $(B)/registers.o $(B)/client.o $(COREOBJS) $(SERVICECOREOBJS) $(DISKCOREOBJS) $(BACKOBJS) $(SERVICEOBJS) $(CLIENTOBJS) $(CLIENTCOMMONOBJS) $(LEGACYOBJS) $(NETLIBOBJS): $(B)/settings $(wildcard include/palmos/*.h)
 
 $(B):
 	mkdir -p $@
 $(B)/library.o: $(S)/library.c include/palmos/NioLib.h $(S)/image.h $(S)/private.h | $(B)
-	$(CC) $(LIBFLAGS) -c $< -o $@
+	$(CC) $(LIBFLAGS) $(USBDEF) -c $< -o $@
 $(B)/image.o: $(S)/image.c $(S)/image.h | $(B)
 	$(CC) $(LIBFLAGS) -c $< -o $@
 $(B)/entry.o: $(S)/entry.S | $(B)
@@ -105,10 +117,14 @@ $(B)/cs1.o: $(S)/cs1.c include/palmos/NioLib.h $(S)/private.h | $(B)
 	$(CC) $(LIBFLAGS) -DFN_PALMOS_SHARED -c $< -o $@
 $(B)/transport.o: $(S)/transport.c $(S)/private.h include/palmos/NioLib.h | $(B)
 	$(CC) $(LIBFLAGS) -c $< -o $@
-$(B)/usb.o: $(S)/usb.c $(S)/private.h include/palmos/NioLib.h | $(B)
-	@test -f "$(HANDSPRING_INCLUDE)/UsbMgr.h" || { echo 'Set HANDSPRING_INCLUDE to the directory containing UsbMgr.h (install the Handspring SDK through palmdev-toolchain/setup.sh).'; exit 1; }
-	$(CC) $(LIBFLAGS) -I"$(HANDSPRING_INCLUDE)" -c $< -o $@
+$(B)/usb.o: $(USBSRC) $(S)/private.h include/palmos/NioLib.h | $(B)
+	$(CC) $(LIBFLAGS) $(USBINC) -c $< -o $@
 $(B)/serial.o: $(S)/serial.c $(S)/private.h include/palmos/NioLib.h | $(B)
+	$(CC) $(LIBFLAGS) -c $< -o $@
+$(B)/netlib.o: $(S)/netlib.c $(S)/private.h $(wildcard $(S)/netlib/*.h) include/palmos/NioLib.h | $(B)
+	$(CC) $(LIBFLAGS) -c $< -o $@
+$(B)/netlib/%.o: $(S)/netlib/%.c $(wildcard $(S)/netlib/*.h) | $(B)
+	mkdir -p $(B)/netlib
 	$(CC) $(LIBFLAGS) -c $< -o $@
 $(B)/backend/transport_cs1.o: src/platform/palmos/fn_transport.c | $(B)
 	mkdir -p $(B)/backend
@@ -124,12 +140,15 @@ $(B)/backend/%.o: src/platform/palmos/%.c src/platform/palmos/fn_palmos_internal
 	$(CC) $(LIBFLAGS) -DFN_PALMOS_SHARED -c $< -o $@
 # Keep the public entries near the dispatch table and place service codecs
 # between their callers and the lower-level transport/core implementations.
+# The Network transport (netlib.o and its NIO core, netlib/) comes last, so
+# the upstream objects keep their distances; services.o reaches it through
+# transport.o.
 # The linker and image auditor retain their independent range/size checks.
-$(B)/NioLib: makefiles/palmos-shared.mk $(PADOBJ) $(B)/entry.o $(B)/library.o $(B)/image.o $(SERVICEOBJS) $(B)/services.o $(LEGACYOBJS) $(SERVICECOREOBJS)  $(B)/owner.o $(B)/transport.o $(DISKCOREOBJS) $(B)/json.o $(COREOBJS) $(B)/cs1.o $(B)/serial.o $(B)/usb.o $(LATEPAD) $(BACKOBJS)
+$(B)/NioLib: makefiles/palmos-shared.mk $(PADOBJ) $(B)/entry.o $(B)/library.o $(B)/image.o $(SERVICEOBJS) $(B)/services.o $(LEGACYOBJS) $(SERVICECOREOBJS)  $(B)/owner.o $(B)/transport.o $(DISKCOREOBJS) $(B)/json.o $(COREOBJS) $(B)/cs1.o $(B)/serial.o $(B)/usb.o $(LATEPAD) $(BACKOBJS) $(NETLIBOBJS)
 	# prc-tools' documented all-version resource ceiling is 64,720 bytes.
 	# Explicit runtime placement keeps memcpy/64-bit helpers reachable from
 	# both the public service entries and the lower-level transport code.
-	$(CC) $(LIBFLAGS) -nostartfiles -Wl,-T,text_64k,-q,-Map,$@.map -o $@ $(B)/entry.o $(B)/library.o $(B)/image.o $(SERVICEOBJS) $(B)/services.o $(LEGACYOBJS) $(SERVICECOREOBJS) $(EARLYPAD)  $(B)/owner.o $(B)/transport.o -lc -lgcc $(DISKCOREOBJS) $(B)/json.o $(COREOBJS) $(B)/cs1.o $(B)/serial.o $(B)/usb.o $(LATEPAD) $(BACKOBJS)
+	$(CC) $(LIBFLAGS) -nostartfiles -Wl,-T,text_64k,-q,-Map,$@.map -o $@ $(B)/entry.o $(B)/library.o $(B)/image.o $(SERVICEOBJS) $(B)/services.o $(LEGACYOBJS) $(SERVICECOREOBJS) $(EARLYPAD)  $(B)/owner.o $(B)/transport.o -lc -lgcc $(DISKCOREOBJS) $(B)/json.o $(COREOBJS) $(B)/cs1.o $(B)/serial.o $(B)/usb.o $(LATEPAD) $(BACKOBJS) $(NETLIBOBJS)
 $(B)/nDat0000.bin: $(B)/NioLib scripts/palmos_shared_image.py
 	$(PYTHON) scripts/palmos_shared_image.py image $(B)
 $(B)/libr0000.bin: $(B)/NioLib

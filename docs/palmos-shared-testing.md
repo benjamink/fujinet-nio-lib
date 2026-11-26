@@ -36,12 +36,26 @@ make test-palmos-shared PALMOS_SDK_VERSION=3.5 \
   PALMOS_SHARED_PYTHON=build/palmos-test-venv/bin/python
 ```
 
+Both SDKs build (`PALMOS_SDK_VERSION=3.1`, the default, and `3.5`); the image audit runs in each build.
+
+The Network transport's NIO core has a native host test, part of `make check`
+(`make test-palmos-netlib`): it runs `shared/netlib/` over BSD sockets against a
+scripted server on 127.0.0.1, covering HTTP and `tcp://` sessions, control-character
+refusal and short bodies. It uses address and undefined-behaviour sanitizers when
+the compiler has them.
+
 Coverage includes compiled library/client globals, ownership, handles,
 validation, CS1 deadlines, serial SLIP/partial I/O, USB counted I/O, retained
 driver memory, readiness, JSON selectors and ABI 1.5 confirmed recovery.
 ABI 1.6 adds compiled service/client coverage for files, clock formats, Wi-Fi,
 AppStore/appkeys, catalogs/mounts, disks and header Open across scripted peers.
-These tests also check capability/version negotiation and guarded new traps.
+These tests also check capability/version negotiation and guarded new traps,
+including ABI 1.7's NetLib traps and the refusal of the 1.6 services by an
+unpublished 1.6 Network-transport build (bit `0x200`).
+The Network transport (`test_palmos_shared_netlib.py`) runs the compiled NIO
+core and NetLib glue against mocked `Net.lib` traps and scripted in-Python
+HTTP/TCP peers: sessions, NetLib open/close-wait status, Hang up, refused
+connects and NetLib's absence. No real network is used.
 The layout tests exercise independent code/global limits and early/late growth;
 they are part of `make check-palmos` and require the installed Palm toolchain.
 Recovery tests check idle/confirmation guards, failed preference writes, no

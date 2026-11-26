@@ -196,11 +196,11 @@ class TransportTests(unittest.TestCase):
 
     def test_invalid_and_unsupported_settings_never_open_backend(self):
         m = self.machine(False)
-        for data in (config(4), config(0), config(99), config(2, 0), config(2, 999999),
+        for data in (config(5), config(0), config(99), config(2, 0), config(2, 999999),
                      config(options=2), config(version=2), config(size=22), config(reserved=1)):
             self.assertEqual(m.set_config(data), 0x8001)
         self.assertFalse(m.saved_preferences)
-        for version, data in ((2, config(2)), (1, config(4)), (1, b'bad'), (1, config(reserved=1))):
+        for version, data in ((2, config(2)), (1, config(5)), (1, b'bad'), (1, config(reserved=1))):
             m.saved_preferences[0x4e694c31, 0x4e34] = version, data
             self.assertEqual(m.get_config(), (0, config(), 2))
             self.assertNotEqual(m.begin()[2], 0)

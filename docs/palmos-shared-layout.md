@@ -23,6 +23,10 @@ other platform's compiler flags or memory limits have been changed here.
    the required libc/libgcc helpers. These functions need to be reachable from
    both the early entries and the later core/backends.
 5. Common disk/network codecs and physical backend code.
+6. The Network transport (ABI 1.7): `netlib.o` and its NIO core (`netlib/`).
+   Placed last so the groups above keep their distances; `services.o`
+   reaches it through `transport.c`, and the core calls back only into the
+   libc helpers.
 
 The common service sources, protocol contracts and public `fn_*` architecture
 are retained. File boundaries remain useful for archive selection; the owner
@@ -36,7 +40,8 @@ ordinals, A4 setup/restoration, and absence of caller A5 dependence.
 
 Objdump also decodes inline data as instructions. The A5 audit exempts only the
 already validated dispatch/name bytes and the byte-for-byte verified legacy
-appkey hexadecimal/persistent-prefix constants. Every A5 instruction outside
+appkey hexadecimal/persistent-prefix constants and the Network transport's
+named text constants (`k_netlib`, `k_http_host`, ...). Every A5 instruction outside
 those exact regions is still rejected; tests cover both sides of the regions
 and altered constants.
 

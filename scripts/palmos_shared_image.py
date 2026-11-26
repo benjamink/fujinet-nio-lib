@@ -109,7 +109,20 @@ def audit_caller_a5(dis, code, symbols):
         raise ValueError('unexpected inline data NioLibName')
     data = [(symbols['NioLibDispatch'], name + 7)]
     for name, literal in [('k_hex', b'0123456789abcdef\0'),
-                          ('k_persist_prefix', b'persist:///FujiNet/\0')]:
+                          ('k_persist_prefix', b'persist:///FujiNet/\0'),
+                          # The Network transport's text (ABI 1.7).
+                          ('k_netlib', b'Net.lib\0'),
+                          ('k_sock_netlib', b'Net.lib\0'),
+                          ('k_netlib_device', b'Palm NetLib\0'),
+                          ('k_http_host', b' HTTP/1.0\r\nHost: \0'),
+                          ('k_http_agent', b'\r\nUser-Agent: fujinet-nio-palmOS\r\nConnection: close\r\n\0'),
+                          ('k_crlf', b'\r\n\0'),
+                          ('k_crlf2', b'\r\n\r\n\0'),
+                          ('k_get', b'GET\0'), ('k_post', b'POST\0'), ('k_put', b'PUT\0'),
+                          ('k_delete', b'DELETE\0'), ('k_head', b'HEAD\0'),
+                          ('k_type_json', b'application/json\0'),
+                          ('k_type_form', b'application/x-www-form-urlencoded\0'),
+                          ('k_type_text', b'text/plain\0')]:
         if name in symbols:
             start = symbols[name]
             if code[start:start + len(literal)] != literal:
@@ -198,6 +211,8 @@ def audit(out, objdump='m68k-palmos-objdump', nm='m68k-palmos-nm'):
         names += ['NioLibRawCall', 'NioLibFileStat', 'NioLibFileRead', 'NioLibFileWrite', 'NioLibFileMkdir', 'NioLibFileListPages', 'NioLibOpenHeaders', 'NioLibFujiGetInfo', 'NioLibWifiGetStatus', 'NioLibWifiGetConfig', 'NioLibWifiSetConfig', 'NioLibWifiGetAdapterInfo', 'NioLibWifiScan', 'NioLibWifiTryJoin', 'NioLibWifiGetJoinStatus', 'NioLibAppstoreStat', 'NioLibAppstoreRead', 'NioLibAppstoreWrite', 'NioLibAppstoreDelete', 'NioLibAppstoreList', 'NioLibSlotCatalogGet', 'NioLibSlotCatalogPut', 'NioLibSlotCatalogDelete', 'NioLibSlotCatalogRange', 'NioLibResolveMountTarget', 'NioLibFormatMountDisplay', 'NioLibClockSetTimezone', 'NioLibClockSetTimezoneSave', 'NioLibDiskMount', 'NioLibDiskUnmount', 'NioLibDiskFlush', 'NioLibDiskInfo', 'NioLibDiskClearChanged', 'NioLibDiskRestoreBoot', 'NioLibDiskReadSector', 'NioLibDiskWriteSector', 'NioLibClockSet', 'NioLibClockSyncNetworkTime', 'NioLibClockGetFormat', 'NioLibClockGetTz', 'NioLibLegacySetAppkeyDetails', 'NioLibLegacyReadAppkey', 'NioLibLegacyReadAppkeyBuffered', 'NioLibLegacyWriteAppkey', 'NioLibDiskLastError']
     if 'NioLibDiskInspect' in sym:
         names += ['NioLibDiskInspect', 'NioLibFujiGetHsio', 'NioLibFujiSetHsio']
+    if 'NioLibGetNetLibStatus' in sym:  # ABI 1.7
+        names += ['NioLibGetNetLibStatus', 'NioLibNetLibHangup']
     if sym['NioLibName'] != table + 2 * len(names):
         raise ValueError('unexpected dispatch/name extent')
     for i, name in enumerate(names):

@@ -48,6 +48,22 @@ UInt16 nl_usb_available(void);
 UInt16 nl_usb_exchange(const UInt8 *, UInt16, UInt8 *, UInt16, UInt16 *);
 UInt16 nl_json_query(UInt16 handle, const Char *selector);
 Boolean nl_payload_valid(const UInt8 *, const UInt8 *, UInt16, UInt16);
+UInt16 nl_netlib_available(void);
+UInt16 nl_netlib_open(void);
+void nl_netlib_close(void);
+UInt16 nl_netlib_ready(void);
+UInt16 nl_netlib_exchange(const UInt8 *, UInt16, UInt8 *, UInt16, UInt16 *);
+void nl_netlib_status(NioLibNetLibStatus *);
+Err nl_netlib_hangup(void);
+void nl_transport_netlib_status(NioLibNetLibStatus *);
+Err nl_transport_netlib_hangup(void);
+
+/* A build without the Handspring SDK has no USB backend (usb_none.c) and does not claim it. */
+#ifdef NL_NO_USB
+#define NL_CAP_USB 0
+#else
+#define NL_CAP_USB nioLibCapUSB
+#endif
 
 #ifdef FN_PALMOS_SHARED
 #define FN_PALMOS_CARD_ATTR_GET nl_card_attr
