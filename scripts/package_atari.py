@@ -58,7 +58,7 @@ def main():
             'See manifest.json for the exact source revision, backend and compiler.\n'
             'Requires compatible FujiNet-NIO firmware; the HSIO get/set API needs\n'
             'firmware with the FujiDevice GetHsio and SetHsio commands.\n'
-            'Source: https://github.com/markjfisher/fujinet-nio-lib\n')
+            'Source: https://github.com/fujinet-nio/fujinet-nio-lib\n')
         # Stable member order and timestamps. Compiler output is recorded in the manifest.
         with zipfile.ZipFile(output, 'w', zipfile.ZIP_DEFLATED) as z:
             for path in sorted(stage.rglob('*')):

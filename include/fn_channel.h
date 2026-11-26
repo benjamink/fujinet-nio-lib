@@ -22,6 +22,9 @@ extern "C" {
 uint8_t fn_channel_init(void);
 uint8_t fn_channel_ready(void);
 uint8_t fn_channel_write_byte(uint8_t value, uint16_t timeout_ms);
+#ifdef FN_CHANNEL_BULK_WRITE
+uint8_t fn_channel_write_bytes(const uint8_t *data, uint16_t length, uint16_t timeout_ms);
+#endif
 uint8_t fn_channel_read_byte(uint8_t *value, uint16_t timeout_ms);
 void fn_channel_drain_rx(void);
 void fn_channel_close(void);

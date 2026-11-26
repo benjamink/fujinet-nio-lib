@@ -8,6 +8,7 @@
 #   make bbc        - Build for BBC B
 #   make bbc-clib   - Build for BBC B with clib ROM
 #   make c64        - Build for Commodore 64
+#   make mac68k     - Build for the classic 68k Macintosh (Retro68)
 #   make linux      - build for linux/posix environment
 #   make clean      - Remove build artifacts
 #   make help       - Show this help
@@ -15,7 +16,7 @@
 # Supported targets
 # TARGETS = atari apple2 apple2enh bbc c64 coco msdos linux
 TARGETS = atari bbc bbc-clib c64 msdos-serial msdos-ioctl msdos-f5 linux amiga
-EXTRA_TARGETS = amiga-driver palmos-serial palmos-springboard
+EXTRA_TARGETS = amiga-driver palmos-serial palmos-springboard mac68k
 PALMOS_TARGETS = palmos-serial palmos-springboard
 
 # Output library name
@@ -25,7 +26,7 @@ override PROGRAM := fujinet-nio
 .PHONY: all clean help disk-bbc disk-bbc-clib test-legacy test-mount-resolve \
 	test-appstore-read test-list-pages test-slot-catalog test-bbc test-bbc-scripted \
 	test-bbc-real test-fuji test-wifi test-disk test-disk-context test-session test-stream-wake test-open-ext test-open-wire test-ready-wire test-write-partial test-library-link \
-	test-amiga-transport test-c64-transport test-palmos-transport test-atari-transport test-atari-hsio test-atari-proc test-atari-read-profile test-atari-list-pages test-atari-appkey-uri test-atari-parse-read test-atari-client-buffers test-atari-network-read test-atari-network-write test-atari-network-open test-atari-compact test-raw-transport-retry test \
+	test-amiga-transport test-c64-transport test-palmos-transport test-palmos-netlib test-mac68k-transport test-atari-transport test-atari-hsio test-atari-proc test-atari-read-profile test-atari-list-pages test-atari-appkey-uri test-atari-parse-read test-atari-client-buffers test-atari-network-read test-atari-network-write test-atari-network-open test-atari-compact test-raw-transport-retry test \
 	test-all-build check check-palmos msdos $(TARGETS) $(EXTRA_TARGETS)
 
 # Default target: build all
@@ -54,7 +55,7 @@ PALMOS_BUILDER ?= auto
 PALMDEV_TOOLCHAIN ?= $(if $(NIO_WORKSPACE),$(NIO_WORKSPACE)/external/palmdev-toolchain,$(abspath ../palmdev-toolchain))
 export PALMOS_SDK_VERSION PALMOS_BUILDER PALMDEV_TOOLCHAIN
 palmos-shared:
-	bash scripts/palmos-build.sh $(MAKE) -f makefiles/palmos-shared.mk B=$(PALMOS_SHARED_BUILD) $(if $(SBNIO_ABI_INCLUDE),SBNIO_ABI_INCLUDE="$(SBNIO_ABI_INCLUDE)") $(if $(HANDSPRING_INCLUDE),HANDSPRING_INCLUDE="$(HANDSPRING_INCLUDE)")
+	bash scripts/palmos-build.sh $(MAKE) -f makefiles/palmos-shared.mk B=$(PALMOS_SHARED_BUILD) $(if $(PALMOS_LAYOUT_PAD_BYTES),PALMOS_LAYOUT_PAD_BYTES=$(PALMOS_LAYOUT_PAD_BYTES)) $(if $(PALMOS_LAYOUT_PAD_POSITION),PALMOS_LAYOUT_PAD_POSITION=$(PALMOS_LAYOUT_PAD_POSITION)) $(if $(SBNIO_ABI_INCLUDE),SBNIO_ABI_INCLUDE="$(SBNIO_ABI_INCLUDE)") $(if $(HANDSPRING_INCLUDE),HANDSPRING_INCLUDE="$(HANDSPRING_INCLUDE)")
 
 test-palmos-shared:
 	PALMOS_SHARED_BUILD=$(PALMOS_SHARED_BUILD) $(PALMOS_SHARED_PYTHON) scripts/palmos_test_preflight.py
@@ -66,9 +67,19 @@ test-palmos-build:
 	python3 -m unittest discover -s tests -p 'test_palmos_build.py' -v
 test: test-palmos-build
 
-$(filter-out palmos-serial palmos-springboard,$(TARGETS) $(EXTRA_TARGETS)):
+.PHONY: test-mac68k-build
+test-mac68k-build:
+	python3 -m unittest discover -s tests -p 'test_mac68k_build.py' -v
+test: test-mac68k-build
+
+$(filter-out palmos-serial palmos-springboard mac68k,$(TARGETS) $(EXTRA_TARGETS)):
 	@echo "Building for $@..."
 	$(MAKE) -f makefiles/build.mk TARGET=$@ PROGRAM=$(PROGRAM) lib
+
+# Classic Macintosh: Retro68 from PATH, or its Docker image when it is not installed (MAC68K_BUILDER).
+mac68k:
+	@echo "Building for $@..."
+	bash scripts/mac68k-build.sh $(MAKE) -f makefiles/build.mk TARGET=$@ PROGRAM=$(PROGRAM) lib
 
 palmos-serial palmos-springboard:
 	bash scripts/palmos-build.sh $(MAKE) -f makefiles/build.mk TARGET=$@ PROGRAM=$(PROGRAM) $(if $(SBNIO_ABI_INCLUDE),SBNIO_ABI_INCLUDE="$(SBNIO_ABI_INCLUDE)") lib
@@ -226,6 +237,10 @@ test-palmos-transport:
 	@echo "Running Palm OS Springboard transport host tests..."
 	bash ./tests/run_palmos_transport_host_test.sh
 
+test-palmos-netlib:
+	@echo "Running Palm OS Network transport (NetLib) core host tests..."
+	bash ./tests/run_palmos_netlib_host_test.sh
+
 test-atari-transport:
 	@echo "Running Atari assembled SIOV/DCB transport test..."
 	bash ./tests/run_atari_transport_sim_test.sh
@@ -249,6 +264,10 @@ test-c64-transport:
 	@echo "Running C64 IEC transport host test..."
 	bash ./tests/run_c64_transport_host_test.sh
 
+test-mac68k-transport:
+	@echo "Running classic Macintosh HD20 mailbox transport host test..."
+	bash ./tests/run_mac68k_transport_host_test.sh
+
 test-raw-transport-retry:
 	@echo "Running raw-call transport replay guard..."
 	bash ./tests/run_raw_transport_retry_test.sh
@@ -271,7 +290,7 @@ test-release:
 
 test: test-fuji-hsio test-package-atari test-release
 
-test: test-u1mb-clear test-library-link test-legacy test-mount-resolve test-appstore-read test-list-pages test-atari-list-pages test-atari-appkey-uri test-atari-parse-read test-atari-client-buffers test-atari-network-read test-atari-network-write test-atari-network-open test-slot-catalog test-fuji test-wifi test-disk test-disk-context test-session test-stream-wake test-open-ext test-open-wire test-ready-wire test-large-read test-write-partial test-amiga-transport test-c64-transport test-palmos-transport test-atari-transport test-atari-hsio test-atari-proc test-atari-read-profile test-atari-compact test-raw-transport-retry
+test: test-u1mb-clear test-library-link test-legacy test-mount-resolve test-appstore-read test-list-pages test-atari-list-pages test-atari-appkey-uri test-atari-parse-read test-atari-client-buffers test-atari-network-read test-atari-network-write test-atari-network-open test-slot-catalog test-fuji test-wifi test-disk test-disk-context test-session test-stream-wake test-open-ext test-open-wire test-ready-wire test-large-read test-write-partial test-amiga-transport test-c64-transport test-palmos-transport test-palmos-netlib test-mac68k-transport test-atari-transport test-atari-hsio test-atari-proc test-atari-read-profile test-atari-compact test-raw-transport-retry
 
 # Fast required change check: compile every configured target, then run the
 # host-side tests and public archive-link test. Keep this as a recipe rather
@@ -301,6 +320,7 @@ check-palmos:
 	done
 	$(MAKE) palmos-shared
 	$(MAKE) test-palmos-shared
+	$(MAKE) test-palmos-layout
 
 # Help
 help:
@@ -321,6 +341,8 @@ help:
 	@echo "  make test-amiga-transport - Run Amiga broker-client host tests"
 	@echo "  make test-stream-wake - Run stream transport idle-reclaim tests"
 	@echo "  make test-palmos-transport - Run Palm OS Springboard client host tests"
+	@echo "  make test-palmos-netlib - Run Palm OS Network transport (NetLib) core host tests"
+	@echo "  make test-mac68k-transport - Run classic Macintosh HD20 mailbox host tests"
 	@echo "  make palmos-shared - Build NioLib.prc and NioLibTest.prc (prc-tools)"
 	@echo "  make check-palmos - Palm OS targets, NioLib and its m68k tests (needs the Palm toolchain)"
 	@echo "  make test-palmos-shared - Require shared-library images and m68k execution"
@@ -348,6 +370,7 @@ help:
 	@echo "  SBNIO_ABI_INCLUDE - -I path to sbnio.h for palmos-springboard"
 	@echo "  PALMOS_SDK_VERSION - 3.1 (default) or optional 3.5"
 	@echo "  PALMOS_BUILDER - auto (default), native, or container"
+	@echo "  MAC68K_BUILDER - auto (default), native, or container (Retro68 in Docker)"
 	@echo "  PALMDEV_TOOLCHAIN - installed palmdev-toolchain checkout"
 	@echo ""
 	@echo "Output:"
@@ -375,3 +398,25 @@ test: test-bbc-ready
 test-bbc-headers:
 	bash tests/run_bbc_headers_test.sh
 test: test-bbc-headers
+
+# Common FileDevice transfers, disk inspection and bounded clock decoding.
+.PHONY: test-file-wire test-clock-format-wire test-common-utility-cc65
+test-file-wire:
+	bash tests/run_file_wire_test.sh
+test-clock-format-wire:
+	bash tests/run_clock_format_wire_test.sh
+test-common-utility-cc65:
+	bash tests/run_common_utility_cc65_test.sh
+test: test-file-wire test-clock-format-wire test-common-utility-cc65
+
+.PHONY: test-palmos-layout-audit test-palmos-layout
+test-palmos-layout-audit:
+	python3 -m unittest discover -s tests -p test_palmos_shared.py -k LayoutAuditTests -v
+test: test-palmos-layout-audit
+test-palmos-layout:
+	PALMOS_SHARED_BUILD=$(PALMOS_SHARED_BUILD) PALMOS_SHARED_PYTHON=$(PALMOS_SHARED_PYTHON) bash tests/run_palmos_layout_test.sh
+
+.PHONY: test-linux-channel
+test-linux-channel:
+	bash tests/run_linux_channel_test.sh
+test: test-linux-channel

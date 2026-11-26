@@ -16,6 +16,7 @@ int nl_image_validate(const unsigned char *p, unsigned long length,
                       unsigned long code_size)
 {
     unsigned long data, total, count, i, off, kind, target, previous = 0;
+    if (!code_size || code_size > NL_CODE_LIMIT) return 0;
     if (!p || length < NL_IMAGE_HEADER || get32(p) != 0x4e4c4731UL) return 0;
     data = get32(p + 4); total = get32(p + 8); count = get32(p + 12);
     if (!data || data > total || total > NL_IMAGE_LIMIT || data > length - 16) return 0;

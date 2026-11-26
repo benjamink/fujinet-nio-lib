@@ -139,6 +139,9 @@ extern "C" {
 
 /* File service commands */
 
+/** Inspect a filesystem URI */
+#define FN_CMD_FILE_STAT       0x01
+
 /** Read bytes from a filesystem URI */
 #define FN_CMD_FILE_READ       0x03
 

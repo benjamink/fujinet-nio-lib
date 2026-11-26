@@ -39,7 +39,7 @@ static void frame_done(void)
 {
     uint8_t packet[64];
     uint8_t reply[FN_HEADER_SIZE];
-    uint16_t length = fn_slip_decode(_frame, _frame_length, packet);
+    uint16_t length = fn_slip_decode(_frame, _frame_length, packet, sizeof packet);
 
     _frame_length = 0;
     if (length < FN_HEADER_SIZE)

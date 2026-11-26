@@ -10,6 +10,8 @@ uint8_t fn_clock_get_tz(uint8_t *time_data, const char *tz, FnTimeFormat format)
     uint8_t tz_len;
     uint16_t i;
 
+    if ((unsigned)format > FN_TIME_FORMAT_APPLE3_SOS) return FN_ERR_INVALID;
+
     if (time_data == NULL || tz == NULL) {
         return FN_ERR_INVALID;
     }
@@ -34,5 +36,5 @@ uint8_t fn_clock_get_tz(uint8_t *time_data, const char *tz, FnTimeFormat format)
         return status;
     }
 
-    return fn_clock_copy_format_response(time_data, data_offset, data_len);
+    return fn_clock_copy_format_response(time_data, data_offset, data_len, (uint8_t)format);
 }

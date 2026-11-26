@@ -35,6 +35,9 @@ uint8_t fn_file_list_pages(fn_file_io_t *io,
     uint8_t filter_len;
     uint8_t result;
 
+    if (!io || !io->buffer || !uri || !req || !out) {
+        return FN_ERR_INVALID;
+    }
     uri_len = (uint16_t)strlen(uri);
     filter_len = req->filter ? (uint8_t) strlen(req->filter) : 0;
     if (req->filter && strlen(req->filter) > 255) {

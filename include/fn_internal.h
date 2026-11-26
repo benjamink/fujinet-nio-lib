@@ -203,9 +203,10 @@ uint8_t fn_clock_exchange(uint8_t command,
                           uint16_t *data_offset,
                           uint16_t *data_len);
 uint8_t fn_clock_response_byte(uint16_t offset);
+uint16_t fn_clock_format_capacity(uint8_t format);
 uint8_t fn_clock_copy_format_response(uint8_t *time_data,
                                       uint16_t data_offset,
-                                      uint16_t data_len);
+                                      uint16_t data_len, uint8_t format);
 
 #ifdef __cplusplus
 }

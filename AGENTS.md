@@ -61,6 +61,11 @@ means file boundaries matter.
 
 ## Adding a client call
 
+New public functionality must be available through both the static library and
+the Palm shared library. If one form is incompatible, document the specific
+reason and test its explicit unsupported behavior. For Palm shared additions,
+provide version/capability negotiation, trap/client bindings and compiled tests.
+
 Follow the conventions of recent calls such as `fn_fuji_get_info`.
 
 1. One externally-useful function per source file (see the Archive/linking

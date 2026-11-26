@@ -5,6 +5,8 @@
 #define NIO_GLOBALS_IMAGE_H
 #define NL_IMAGE_HEADER 16UL
 #define NL_IMAGE_LIMIT 32767UL
+/* prc-tools text_64k: resource bound compatible with early Palm OS. */
+#define NL_CODE_LIMIT 64720UL
 #define NL_IMAGE_TYPE 'nDat'
 #define NL_IMAGE_ID 0
 /* No globals, allocation, traps or libc: also compiled by native tests. */

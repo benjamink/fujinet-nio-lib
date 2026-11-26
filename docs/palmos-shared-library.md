@@ -130,7 +130,7 @@ using earlier compatible traps need no rebuild merely to select USB.
 
 ## Application contract
 
-Current identity is **NioLib / libr / NiL1**, ABI **1.5**, implementation **8**.
+Current identity is **NioLib / libr / NiL1**, ABI **1.7**, implementation **13**.
 See [ABI reference](palmos-shared-abi.md) for capabilities, traps and preferences.
 The client supports networking libraries from ABI 1.1 onward, negotiates optional
 functions, and returns Unsupported instead of calling an unknown JSON trap.
@@ -163,6 +163,7 @@ and the cleanup report through `NioLibClient.h`.
 | 1 | Handspring Springboard CS1, RP2350 module and its separate NIO host link | Raw canonical FujiBus packets over 16-bit registers |
 | 2 | Physical serial cradle/cable and an NIO SLIP backend | Common stream session + SLIP |
 | 3 | Handspring USB cradle, HsUs library and a compatible USB Host backend | Raw canonical FujiBus packets on Generic Port 2 |
+| 4 | Network (ABI 1.7): no FujiNet hardware; the NIO device runs inside NioLib and reaches the Internet through the Palm's NetLib | Packets handled in the library by the NIO core in `shared/netlib/` |
 
 Springboard is the default when no saved preference exists. The backend is
 fixed at BeginClient until EndClient. Configuration/status inspection and saving
@@ -172,15 +173,30 @@ as safe display defaults but prevent initialization until explicitly repaired.
 **Springboard** validates Handspring support and card mapping instead of using
 a hardcoded physical address. Its shared-only guards preserve 16-bit bus
 operations, request/reply sequences and a pending-sequence tombstone, with
-mapping/deadline checks during access. It does not change RP2350 timing or ROM.
+mapping/deadline checks during access: every write checks the card mapping in
+full first, reads reuse a passed check for up to a quarter second, and the
+deadline is checked again after each full check. A status register that never
+reads the same twice in a row fails the exchange, and never sends a request
+again. It does not change RP2350 timing or ROM.
 
 **Serial** uses New Serial Manager where present and falls back to the legacy
 Serial Library. It selects the cradle port, 8N1, 9600/19200/38400/57600/115200 baud
 (default 115200), with no flow control or RTS/CTS. It reuses `fn_stream_session_t`
 and SLIP. A 1024-byte packet needs at most 2050 encoded bytes, including two END
 bytes. Port, installed RX buffer, TX storage and acquired legacy references are
-tracked independently. No keyboard-daemon takeover or HotSync arbitration is
-implemented; Handspring-specific physical serial behavior remains unqualified.
+tracked independently. No keyboard-daemon takeover is implemented;
+Handspring-specific physical serial behavior remains unqualified.
+
+FujiNet NIO can lend an idle cradle line to HotSync (fujinet-nio
+`docs/hotsync.md`, "Cradle"): after a minute without a FujiBus request it
+listens at 9600 baud for 1.5 s of every 3 s and drops what arrives meanwhile.
+A request lost that way would leave the serial marker set, and every app would
+then get BUSY until NIO Config's Reset. So, as the static `palmos-serial`
+target does, the backend reclaims the line before the first request after the
+port opens or after 30 s without a reply: FujiDevice GetInfo (read-only, safe to
+repeat), up to 8 times with a 700 ms wait each, outside the marker. The request
+itself is sent once, and only after GetInfo has been answered; if nothing
+answers, it is not sent and nothing is left pending (implementation 16).
 
 **USB** finds/loads Handspring's `USB Library` / `HsUs`, checks the required
 counted API dispatch range and explicitly opens Generic Port 2 (`0x0002`), not
@@ -234,7 +250,7 @@ and dispatch table; `nDat/0` contains a validated initialized-data/BSS/fixup ima
 `SysLibTblEntry(refNum)->globalsP`, preserving the caller's A4/A5. First Open
 allocates system-owned storage, initializes data/BSS and relocates data/code
 pointers. The serializer rejects unsupported fixups, caller-A5 dependencies,
-unresolved helpers and code/global images above its 32767-byte limits.
+unresolved helpers, code above 64,720 bytes, and globals above 32,767 bytes.
 
 External library Open counts, foreground ownership, physical driver ownership
 and unresolved-command markers are separate. EndClient releases foreground
@@ -283,7 +299,7 @@ must not be treated as permanent storage.
 compiled m68k tests with mocked Palm traps, optional app fixtures and physical
 acceptance steps. Automated tests validate generated code, not full Palm OS behavior.
 
-The current ABI 1.5 recovery changes and SDK 3.1-built artifacts have not been
+The current ABI 1.6 service additions and SDK 3.1-built artifacts have not been
 qualified on physical hardware. Linux builds and mocked execution tests pass;
 the user has independently confirmed the Palm build works. The Prism results
 below describe earlier revisions and do not verify the new Reset action,
@@ -300,3 +316,47 @@ Serial hardware, macOS compile/runtime, ESP32-S3 USB Host, general Palm-branded
 USB, arbitrary physical fault recovery and long-duration heap/stress use remain
 unqualified. ESP32-S3 USB Host is future work: it would be an alternative to the
 RP2350 Springboard configuration, not a simultaneous connection or role switch.
+
+## ABI 1.6 service coverage
+
+The installed shared library now exposes files (stat/read/write/mkdir/ListPages),
+HTTP header Open, device and Wi-Fi configuration, AppStore and legacy appkeys,
+slot catalogs and mount-path helpers, disk operations and inspection, and the
+complete clock service. Both ABI >=1.6 and nioLibCapServices are required; the
+client returns Unsupported against older libraries without invoking new traps.
+See [the ABI reference](palmos-shared-abi.md#abi-16-service-additions) for entry
+points and [the layout guide](palmos-shared-layout.md) for growth constraints.
+
+These entries reuse common codecs inside the library. Applications link only
+libniolib-client.a and provide their own scratch and data buffers. File transfers
+use explicit offsets, fit one packet, and do not add automatic retries. Offset
+zero writes create/truncate; callers must handle partial acceptance and ambiguous
+errors. PRC installation remains application-owned Palm OS work.
+
+ABI 1.6 preserved the existing trap ordinals with implementation identity 9;
+ABI 1.7 (implementation 15) adds the Network transport below.
+It retains PR #11 transport behavior and has not yet been qualified on hardware.
+Do not pair these public traps with the earlier private PR11 benchmark adapters.
+
+## Network transport (ABI 1.7)
+
+For a Palm with a network but no FujiNet: a Sony Clie with PPP over Bluetooth to a gateway, a Palm with Wi-Fi, a
+modem or a cradle. NioLib runs the NIO device itself (`src/platform/palmos/shared/netlib/`, the C core from
+fujinet-nio-palmOS: NetworkDevice `tcp://` and `http://`, FujiDevice info, WiFiDevice status and configuration) and
+opens sockets with NetLib, which dials whatever service the Network preferences select. HTTPS, redirects,
+translation, UDP, clock and files are not implemented there; those calls answer Unsupported. A request body of
+unknown length is limited to 1 KB. A URL or request header holding a control character (or a space in the URL, or a
+`:` or space in a header name) is refused as Invalid before any connection, so a value cannot add header lines. A body
+shorter than its Content-Length ends in an IO error, after the bytes that did arrive; a body with no Content-Length
+ends at the server's close. The core's state (about 6 KB) is allocated for each client session only. Select
+it in NIO Config.
+
+The typed 1.6 calls (`fn_fuji_get_info`, `fn_wifi_get_status`, `fn_raw_call`, ...) reach the core through the same
+packet path as the hardware transports. ABI 1.7 adds `NioLibGetNetLibStatus` / `NioLibNetLibHangup` for NIO Config,
+behind `nioLibCapNetLib`. Between sessions the status's counters are the last session's, and the link counts as up
+while NetLib is open or in its close-wait (the link kept for its idle time after everyone closed it); checking the
+close-wait never dials, but starts the idle time over. Hang up closes a link in its close-wait at once, and answers
+`nioLibErrBusy` while anything still has NetLib open.
+
+A build without the Handspring SDK (no `UsbMgr.h` in `HANDSPRING_INCLUDE`) builds `usb.o` from `usb_none.c`: it has
+no USB backend and does not report `nioLibCapUSB`.

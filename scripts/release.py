@@ -252,7 +252,7 @@ def prepare(version, revision, base, output, driver, name):
                 manifest['amiga_driver_commit'] = driver_commit
             (stage / 'manifest.json').write_text(json.dumps(manifest, indent=2, sort_keys=True) + '\n')
             (stage / 'README.txt').write_text('FujiNet-NIO library: ' + target + '\nSee manifest.json for build provenance.\n'
-                'Requires compatible FujiNet-NIO firmware. Source: https://github.com/markjfisher/fujinet-nio-lib\n')
+                'Requires compatible FujiNet-NIO firmware. Source: https://github.com/fujinet-nio/fujinet-nio-lib\n')
             write_package(stage, output / f'fujinet-nio-lib-{target}-{version}.zip')
     assets = sorted(output.glob('*.zip'))
     (output / 'SHA256SUMS').write_text(''.join(f'{hashlib.sha256(p.read_bytes()).hexdigest()}  {p.name}\n' for p in assets))

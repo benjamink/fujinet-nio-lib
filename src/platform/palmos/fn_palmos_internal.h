@@ -38,4 +38,28 @@ typedef volatile uint16_t *fn_palmos_port_t;
 
 #define FN_PALMOS_PORT(address) ((fn_palmos_port_t)(address))
 
+/* A register read until two reads in a row agree. The module answers each read
+ * from its SRAM within the bus cycle, and a read it answers late returns
+ * another word (seen on a Prism, most often just as a reply is published), which
+ * must neither fail nor misdirect an exchange. Returns 0, with *value untouched,
+ * when no two reads in a row agree in 1 + FN_PALMOS_STABLE_TRIES reads: the
+ * register was not read. Two reads that agree are the best the bus gives, not
+ * proof of the word. */
+#define FN_PALMOS_STABLE_TRIES 4
+
+static inline uint8_t fn_palmos_read_stable(uint16_t offset, uint16_t *value)
+{
+    uint16_t a = FN_PALMOS_RD(offset), b, tries;
+
+    for (tries = 0; tries < FN_PALMOS_STABLE_TRIES; tries++) {
+        b = FN_PALMOS_RD(offset);
+        if (b == a) {
+            *value = a;
+            return 1;
+        }
+        a = b;
+    }
+    return 0;
+}
+
 #endif

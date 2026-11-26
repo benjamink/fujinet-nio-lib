@@ -3,6 +3,7 @@
 No test substitutes service implementations or the upstream CS1 packet engine.
 This is host evidence, not Palm/USB/Internet hardware qualification.
 """
+import re
 import struct
 import json
 import unittest
@@ -13,6 +14,13 @@ try:
     from unicorn.m68k_const import UC_M68K_REG_A0, UC_M68K_REG_A7, UC_M68K_REG_D0, UC_M68K_REG_PC
 except ImportError:
     pass
+
+
+# FeatureMgr.h (SDK 3.1 and 3.5): ftrErrorClass is 0x0C00.
+FTR_NO_SUCH_FEATURE = 0x0c02  # ftrErrNoSuchFeature
+FTR_INTERNAL_ERR = 0x0c05     # ftrErrInternalErr
+MARKER = (0x4e694c31, 0x4e32)  # NioLib's CS1 marker: 'NiL1', 0x4e32
+RECOVERY_REQUIRED = 8          # nioStatusRecoveryRequired
 
 
 def checksum(packet):
@@ -47,6 +55,16 @@ class NetworkMachine(foundation.PalmMachine):
         self.forced_result = 0
         self.wrong_handle, self.short_zone = False, False
         self.pref_write_failure, self.recorded_before_post = False, False
+        self.ftr_write_failure = False
+        self.ftr_read_error = 0           # FtrGet's answer for the marker, when set
+        self.ftr_readback_error = 0       # ... from the first time a doorbell marker goes up
+        self.reg_script = {}              # register offset -> words its reads return, in turn
+        self.card_ticks = 0               # ticks each HsCardAttrGet takes
+        self.slow_after_marker = 0        # card_ticks from the first doorbell marker
+        self.on_expired_check = None      # called at nl_expired's next clock read
+        self.remap_after_begin = False    # BEGIN moves CS1: CsSize changes, no clock tick
+        self.remapped, self.writes_after_remap = False, 0
+        self.write_times = []
         self.pending_request, self.pending_seq = None, 0
         self.hs_calls, self.mmio, self.doorbells = 0, 0, 0
         self.sequences = []
@@ -72,7 +90,7 @@ class NetworkMachine(foundation.PalmMachine):
         self.stack_low = min(self.stack_low, uc.reg_read(UC_M68K_REG_A7))
         if bytes(uc.mem_read(pc, 2)) != b'\x4e\x4f': return
         trap, sp = self.read16(pc + 2), uc.reg_read(UC_M68K_REG_A7)
-        if 0xa801 <= trap <= 0xa817:
+        if 0xa801 <= trap <= 0xa847 and self.read16(sp) == 7:
             target = self.read32(self.ENTRY) + struct.unpack('>h', uc.mem_read(
                 self.read32(self.ENTRY) + 2 * (trap - 0xa800), 2))[0]
             uc.mem_write(sp - 4, struct.pack('>I', pc + 4))
@@ -87,12 +105,19 @@ class NetworkMachine(foundation.PalmMachine):
             key = (self.read32(sp), self.read16(sp + 4))
             if key == (0x68734578, 0):
                 if self.handspring: uc.mem_write(self.read32(sp + 6), struct.pack('>I', 1))
-                else: result = 1
+                else: result = FTR_NO_SUCH_FEATURE
+            elif key == MARKER and self.ftr_read_error: result = self.ftr_read_error
             elif key in self.features:
                 uc.mem_write(self.read32(sp + 6), struct.pack('>I', self.features[key]))
-            else: result = 1
+            else: result = FTR_NO_SUCH_FEATURE
         elif trap == 0xa27c:
-            self.features[self.read32(sp), self.read16(sp + 4)] = self.read32(sp + 6)
+            if self.ftr_write_failure: result = 1
+            else:
+                key, value = (self.read32(sp), self.read16(sp + 4)), self.read32(sp + 6)
+                self.features[key] = value
+                if key == MARKER and value & 0xff:
+                    if self.slow_after_marker: self.card_ticks = self.slow_after_marker
+                    if self.ftr_readback_error: self.ftr_read_error = self.ftr_readback_error
         elif trap == 0xa2d3:
             key = self.read32(sp), self.read16(sp + 4)
             if key not in self.preferences: result = 0xffff
@@ -106,10 +131,15 @@ class NetworkMachine(foundation.PalmMachine):
             if not self.pref_write_failure:
                 self.preferences[self.read32(sp), self.read16(sp + 4)] = (
                     self.read16(sp + 6), bytes(uc.mem_read(self.read32(sp + 8), self.read16(sp + 12))))
-        elif trap == 0xa0f7: result = self.now
+        elif trap == 0xa0f7:
+            result = self.now
+            if self.on_expired_check and self.within(pc, 'nl_expired'):
+                late, self.on_expired_check = self.on_expired_check, None
+                late()
         elif trap == 0xa2e9: result = 100
         elif trap == 0xa349:
             self.hs_calls += 1
+            self.now += self.card_ticks
             assert self.handspring, 'Handspring selector used without feature support'
             assert self.read16(sp) == 6
             card, attr, output = self.read16(sp + 2), self.read16(sp + 4), self.read32(sp + 6)
@@ -147,15 +177,23 @@ class NetworkMachine(foundation.PalmMachine):
         assert size == 2, 'peripheral access is not MOVE.W'
         self.mmio += 1
         off = address - self.CS1
+        value &= 0xffff  # a word; unicorn can pass a write sign-extended
         if access == UC_MEM_WRITE:
-            if off == 0x10000: self.request = bytearray(); self.wanted = value
+            self.write_times.append(self.now)
+            if self.remapped: self.writes_after_remap += 1
+            if off == 0x10000:
+                self.request = bytearray(); self.wanted = value
+                if self.remap_after_begin:
+                    self.remap_after_begin, self.remapped = False, True
+                    self.card_size += 0x1000
             elif off == 0: self.request += struct.pack('>H', value)
             elif off == 0x20000: self.check = value
             elif off == 0x30000:
                 self.doorbells += 1
                 self.sequences.append(value)
-                p = self.preferences.get((0x4e694c31, 0x4e32))
-                assert p and struct.unpack('>IIHH', p[1])[:3] == (0x4e4c5031, self.CS1, value)
+                # The CS1 marker: one feature, the CS1 base with the sequence in its low byte.
+                p = self.features.get((0x4e694c31, 0x4e32))
+                assert p is not None and (p & ~0xff, p & 0xff) == (self.CS1, value)
                 self.recorded_before_post = True
                 self.regs[6] = value
                 if self.bad_check:
@@ -168,7 +206,8 @@ class NetworkMachine(foundation.PalmMachine):
                 else: self.publish(value, self.execute(bytes(self.request[:self.wanted])))
         else:
             if off == 8 and self.silent: self.now += 50
-            if off >= 0x1000:
+            if self.reg_script.get(off): result = self.reg_script[off].pop(0)
+            elif off >= 0x1000:
                 index = off - 0x1000
                 result = int.from_bytes(self.reply_data[index:index + 2].ljust(2, b'\0'), 'big')
             else: result = self.regs.get(off, 0)
@@ -247,6 +286,25 @@ class NetworkMachine(foundation.PalmMachine):
     def client(self, name, args=b''):
         return self.call(name, args, app=True, a5=self.app_a5) & 255
 
+    def status(self):
+        self.uc.mem_write(0x9100, struct.pack('>8H', 16, 0, 0, 0, 0, 0, 0, 0))
+        err = self.call('NioLibGetTransportStatus', struct.pack('>HI', 7, 0x9100))
+        return err, struct.unpack('>8H', self.uc.mem_read(0x9100, 16))
+
+    def deadline(self):
+        """The last call's deadline, in ticks, from NioLib's own globals."""
+        return (self.read32(self.globals + self.symbols['started']) +
+                self.read32(self.globals + self.symbols['budget']))
+
+    def within(self, pc, name):
+        """Whether pc is inside the named NioLib function."""
+        if not hasattr(self, 'text_starts'):
+            self.text_starts = sorted(int(address, 16) for address in re.findall(
+                r'^([0-9a-f]+)\s+[tT]\s+\S+$', (foundation.OUT / 'NioLib.symbols').read_text(), re.M))
+        start = self.symbols[name]
+        end = next((a for a in self.text_starts if a > start), start + 0x400)
+        return self.CODE + start <= pc < self.CODE + end
+
 
 HAS_NETWORK = ((foundation.OUT / 'verification.json').exists() and 'NioLibBeginClient' in
                json.loads((foundation.OUT / 'verification.json').read_text()).get('dispatch', {}))
@@ -290,9 +348,9 @@ class NetworkTests(unittest.TestCase):
         self.assertEqual(m.end(token)[0], 0x8007)
         m.current_app = 1001
         self.assertEqual(m.clock(token + 1)[0], 0x8007)
-        m.uc.mem_write(m.globals + m.symbols['busy'], b'\x00\x01')
+        m.uc.mem_write(m.globals + m.symbols['nl_busy' if 'nl_busy' in m.symbols else 'busy'], b'\x00\x01')
         self.assertEqual(m.clock(token)[0], 0x8006)
-        m.uc.mem_write(m.globals + m.symbols['busy'], b'\x00\x00')
+        m.uc.mem_write(m.globals + m.symbols['nl_busy' if 'nl_busy' in m.symbols else 'busy'], b'\x00\x00')
         self.assertEqual(m.end(token)[:2], (0, 0))
         _, next_token, _ = m.begin()
         self.assertNotEqual(next_token, token)
@@ -348,10 +406,10 @@ class NetworkTests(unittest.TestCase):
         self.assertEqual(m.close(), (0, 0))
 
     def test_failed_tombstone_publication_never_posts_doorbell(self):
-        m = NetworkMachine(); m.open(); _, token, _ = m.begin(); m.pref_write_failure = True
+        m = NetworkMachine(); m.open(); _, token, _ = m.begin(); m.ftr_write_failure = True
         self.assertNotEqual(m.clock(token)[1], 0)
         self.assertEqual(m.doorbells, 0)
-        m.pref_write_failure = False; m.end(token); m.close()
+        m.ftr_write_failure = False; m.end(token); m.close()
 
     def test_compatibility_client_idempotent_init_and_shutdown(self):
         m = NetworkMachine()
@@ -434,7 +492,7 @@ class NetworkTests(unittest.TestCase):
         self.assertEqual(m.mmio, before)
         m.end(token); m.close()
         m = NetworkMachine(); m.open()
-        m.preferences[0x4e694c31, 0x4e32] = (99, b'incompatible')
+        m.features[0x4e694c31, 0x4e32] = 5  # a sequence with no CS1 base
         self.assertNotEqual(m.begin()[2], 0)
         self.assertEqual(m.doorbells, 0)
         self.assertEqual(m.close(), (0, 0))
@@ -495,6 +553,81 @@ class NetworkTests(unittest.TestCase):
         self.assertEqual(m.sequences, [255, 1, 2])
         self.assertEqual(m.end(token)[:2], (0, 0))
         self.assertEqual(m.close(), (0, 0))
+
+    def test_unsettled_result_never_sends_the_request_again(self):
+        # NIO runs the Open; RESULT then reads five times with no two alike,
+        # the last one BAD_CHECK. That is no reason to send it again.
+        m = NetworkMachine(); m.open(); _, token, _ = m.begin()
+        m.reg_script[12] = [0x1111, 0x2222, 0x3333, 0x4444, 0x0004]
+        self.assertNotEqual(m.net_open(token)[2], 0)
+        self.assertEqual(m.doorbells, 1)
+        self.assertEqual(len(m.sessions), 1)
+        self.assertEqual(m.end(token)[2][4], 1)  # reported as possibly run
+        self.assertEqual(m.close(), (0, 0))
+
+    def test_unsettled_status_fails_closed(self):
+        # STATUS between ready and busy, every five reads ending on ready.
+        m = NetworkMachine(); m.open()
+        m.reg_script[4] = [1, 3, 1, 3, 1] * 8
+        self.assertNotEqual(m.begin()[2], 0)
+        self.assertEqual(m.doorbells, 0)
+        m.reg_script.clear()
+        _, token, result = m.begin(); self.assertEqual(result, 0)
+        self.assertEqual(m.clock(token)[1], 0)
+        m.end(token); m.close()
+
+    def test_remap_during_a_request_stops_its_writes(self):
+        # CsSize changes just after the BEGIN write, with no clock tick: no
+        # later write may go through the old CS1.
+        m = NetworkMachine(); m.open(); _, token, _ = m.begin()
+        m.remap_after_begin = True
+        self.assertNotEqual(m.clock(token)[1], 0)
+        self.assertTrue(m.remapped)
+        self.assertEqual(m.writes_after_remap, 0)
+        self.assertEqual(m.doorbells, 0)
+        self.assertFalse(m.features.get(MARKER, 0) & 0xff)
+        m.end(token); m.close()
+
+    def test_deadline_is_checked_after_the_mapping_check_before_a_write(self):
+        # The 35 s deadline passes inside the full mapping check (three
+        # HsCardAttrGet calls of 12 s) made for a write.
+        for when in ('begin', 'doorbell'):
+            with self.subTest(when=when):
+                m = NetworkMachine(); m.open(); _, token, _ = m.begin()
+                if when == 'doorbell':
+                    m.slow_after_marker = 1200
+                else:
+                    def late():
+                        m.now += 30  # a cached check of the mapping is now stale
+                        m.card_ticks = 1200
+                    m.on_expired_check = late
+                self.assertNotEqual(m.clock(token)[1], 0)
+                deadline = m.deadline()
+                if when == 'begin': self.assertIsNone(m.on_expired_check)
+                else: self.assertEqual(m.card_ticks, 1200)
+                self.assertTrue(all(t < deadline for t in m.write_times), (m.write_times, deadline))
+                self.assertEqual(m.doorbells, 0)
+                self.assertFalse(m.features.get(MARKER, 0) & 0xff)  # withdrawn: never posted
+                m.card_ticks = 0
+                m.end(token); m.close()
+
+    def test_feature_errors_other_than_missing_fail_closed(self):
+        m = NetworkMachine(); m.open()
+        m.features[MARKER] = m.CS1 | 7
+        m.ftr_read_error = FTR_INTERNAL_ERR
+        self.assertTrue(m.status()[1][3] & RECOVERY_REQUIRED)
+        self.assertNotEqual(m.begin()[2], 0)
+        self.assertEqual(m.doorbells, 0)
+        m.ftr_read_error = 0
+        self.assertTrue(m.status()[1][3] & RECOVERY_REQUIRED)
+        self.assertEqual(m.close(), (0, 0))
+        # The marker reads back with an error once it is up: no doorbell.
+        m = NetworkMachine(); m.open(); _, token, _ = m.begin()
+        m.ftr_readback_error = FTR_INTERNAL_ERR
+        self.assertNotEqual(m.clock(token)[1], 0)
+        self.assertEqual(m.doorbells, 0)
+        self.assertTrue(m.status()[1][3] & RECOVERY_REQUIRED)
+        m.end(token); m.close()
 
 
 if __name__ == '__main__':

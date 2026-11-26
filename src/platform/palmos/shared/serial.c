@@ -10,12 +10,26 @@
 #define SERIAL_PREF 0x4e35
 #define SERIAL_MAGIC 0x4e535031UL
 #define WIRE_SIZE 2050
+/* FujiNet NIO can lend an idle cradle line to HotSync (fujinet-nio docs/hotsync.md, "Cradle"): after a minute with no
+ * FujiBus request it listens at 9600 baud for 1.5 s of every 3 s, and drops what arrives meanwhile. A request lost
+ * that way gets no reply and leaves the pending marker below, which stops every app on this link until NIO Config's
+ * Reset. So before the first request after an idle spell (or after the port opens) the backend reclaims the line, as
+ * the static palmos-serial target does (FN_STREAM_WAKE_IDLE_MS): FujiDevice GetInfo, which changes nothing and is
+ * safe to repeat, a short wait at a time until something answers, without the marker. Only then is the request sent,
+ * once. If nothing answers, the request is not sent and nothing is pending. */
+#define WAKE_IDLE_MS 30000
+#define WAKE_WAIT_MS 700
+#define WAKE_ATTEMPTS 8
+#define WAKE_LENGTH (FN_HEADER_SIZE + 1)
+#define WAKE_REPLY 192
 static Char serial_name[] = "Serial Library";
 static UInt16 port, opened, old_manager, io_fault, rx_installed, tx_owned, shared_ref;
 static UInt8 tx_byte;
 static UInt32 tx_start;
 static UInt8 rx_buffer[WIRE_SIZE], wire[WIRE_SIZE];
 static fn_stream_session_t session;
+static UInt16 line_held;
+static UInt32 last_reply;
 
 static UInt32 ticks(UInt16 ms)
 {
@@ -146,6 +160,7 @@ UInt16 nl_serial_open(const NioLibConfig *c)
     if (!err) err = fn_stream_session_open(&session);
     if (err) { nl_serial_close(); return FN_ERR_IO; }
     channel_flush(NULL);
+    line_held = 0;
     return FN_OK;
 }
 UInt16 nl_serial_owned(void) { return opened || rx_installed || tx_owned || shared_ref; }
@@ -179,7 +194,7 @@ void nl_serial_close(void)
         } else return;
     }
     if (nl_serial_owned()) return;
-    port = io_fault = 0;
+    port = io_fault = line_held = 0;
     MemSet(&session, sizeof(session), 0);
     MemSet(wire, sizeof(wire), 0); MemSet(rx_buffer, sizeof(rx_buffer), 0);
     tx_byte = 0;
@@ -199,6 +214,27 @@ static Boolean strict_frame(void)
     }
     return true;
 }
+/* FujiNet has the line again once a GetInfo reply comes back, whatever its status. A serial fault ends the attempts. */
+static UInt16 reclaim_line(void)
+{
+    UInt8 wake[WAKE_LENGTH], reply[WAKE_REPLY];
+    UInt16 attempt, got, result;
+    if (line_held && TimGetTicks() - last_reply < ticks(WAKE_IDLE_MS)) return FN_OK;
+    fn_build_header(wake, FN_DEVICE_FUJI, FN_FUJI_CMD_GET_INFO, WAKE_LENGTH);
+    wake[FN_HEADER_SIZE] = FN_FUJI_PROTOCOL_VERSION;
+    wake[FN_CHECKSUM_OFFSET] = fn_calc_packet_checksum(wake, WAKE_LENGTH);
+    for (attempt = 0; attempt < WAKE_ATTEMPTS; ++attempt) {
+        tx_start = TimGetTicks(); io_fault = 0;
+        got = 0;
+        result = fn_stream_session_request(&session, wake, WAKE_LENGTH, reply, sizeof(reply), &got, WAKE_WAIT_MS);
+        if (io_fault) break;
+        if (!result && got >= FN_HEADER_SIZE && reply[0] == FN_DEVICE_FUJI && reply[1] == FN_FUJI_CMD_GET_INFO) {
+            line_held = 1; last_reply = TimGetTicks();
+            return FN_OK;
+        }
+    }
+    return FN_ERR_TIMEOUT;
+}
 UInt16 nl_serial_exchange(const UInt8 *request, UInt16 length,
         UInt8 *response, UInt16 capacity, UInt16 *got)
 {
@@ -208,6 +244,8 @@ UInt16 nl_serial_exchange(const UInt8 *request, UInt16 length,
     if (!request || length < FN_HEADER_SIZE || length > 1024 || !response || !capacity || capacity > 1024)
         return FN_ERR_INVALID;
     if (nl_serial_pending()) return FN_ERR_BUSY;
+    result = reclaim_line();
+    if (result) return result;
     if (!marker_set(SERIAL_MAGIC)) return FN_ERR_IO;
     tx_start = TimGetTicks(); io_fault = 0;
     result = fn_stream_session_request(&session, request, length, response, capacity, got, 35000);
@@ -217,5 +255,6 @@ UInt16 nl_serial_exchange(const UInt8 *request, UInt16 length,
         !nl_payload_valid(request, response, *got, capacity))) result = FN_ERR_IO;
     if (!result && !marker_set(0)) result = FN_ERR_IO;
     if (result) *got = 0;
+    else last_reply = TimGetTicks();
     return result;
 }

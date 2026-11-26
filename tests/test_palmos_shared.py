@@ -67,6 +67,12 @@ class ImageTests(unittest.TestCase):
             with self.subTest(image=p.hex()):
                 self.assertEqual(self.lib.nl_image_validate(p, len(p), 0x100), 0)
 
+    def test_runtime_code_resource_bound_preserves_globals_limit(self):
+        valid = self.fixture()
+        for size in (0, 64721, 65535):
+            self.assertEqual(self.lib.nl_image_validate(valid, len(valid), size), 0)
+        self.assertEqual(self.lib.nl_image_validate(valid, len(valid), 64720), 1)
+
     def test_bad_coff_and_prc(self):
         for bad in (b'', b'\0' * 80):
             with self.assertRaises(ValueError):
@@ -74,6 +80,43 @@ class ImageTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 image.prc(bad)
 
+
+
+class LayoutAuditTests(unittest.TestCase):
+    @staticmethod
+    def coff(code_size=64720, globals_size=32767):
+        # Minimal real COFF headers: independent code and globals budgets.
+        header = struct.pack('>HHIIIHH', 0x150, 3, 0, 0, 0, 0, 0)
+        pos = 20 + 3 * 40
+        sections = b''
+        for name, address, size, offset in [(b'.text', 0, code_size, pos),
+                (b'.data', 0, 4, pos + code_size),
+                (b'.bss', 4, globals_size - 4, 0)]:
+            sections += struct.pack('>8sIIIIIIHHI', name, 0, address, size,
+                                    offset, 0, 0, 0, 0, 0)
+        return header + sections + b'\0' * (code_size + 4)
+
+    def test_code_resource_and_globals_have_independent_limits(self):
+        _, report = image.make_image(self.coff())
+        self.assertEqual(report['code_bytes'], 64720)
+        self.assertEqual(report['global_bytes'], 32767)
+        for code, data in [(64721, 100), (43364, 32768)]:
+            with self.assertRaisesRegex(ValueError, 'size limit'):
+                image.make_image(self.coff(code, data))
+
+    def test_a5_audit_exempts_only_verified_inline_data(self):
+        code = b'\0' * 8 + b'NioLib\0' + b'\0' * 16 + b'0123456789abcdef\0'
+        symbols = {'NioLibDispatch': 0, 'NioLibName': 8, 'k_hex': 31}
+        data_dis = '   0: 1ae8 175c moveb %a0@(5980),%a5@+\n   1f: 3435 3637 movew %a5@(55),%d2'
+        image.audit_caller_a5(data_dis, code, symbols)
+        for address in (15, 48):
+            with self.assertRaisesRegex(ValueError, 'caller A5 dependency'):
+                image.audit_caller_a5(data_dis + '\n %x: moveal %%a5,%%a0' % address,
+                                      code, symbols)
+        with self.assertRaisesRegex(ValueError, 'inline data'):
+            image.audit_caller_a5(data_dis, code[:-1] + b'X', symbols)
+        with self.assertRaisesRegex(ValueError, 'inline data'):
+            image.audit_caller_a5(data_dis, code[:8] + b'X' + code[9:], symbols)
 
 try:
     from unicorn import Uc, UC_ARCH_M68K, UC_MODE_BIG_ENDIAN, UC_HOOK_CODE
@@ -293,6 +336,8 @@ class CompiledM68KTests(unittest.TestCase):
         if 'nl_usb_open' in m.symbols: version = (8, 1, 3, 6)
         if 'NioLibNetJsonQuery' in m.symbols: version = (8, 1, 4, 7)
         if 'NioLibResetTransport' in m.symbols: version = (8, 1, 5, 8)
+        if 'NioLibRawCall' in m.symbols: version = (8, 1, 6, 9)
+        if 'NioLibGetNetLibStatus' in m.symbols: version = (8, 1, 7, 16)
         self.assertEqual(struct.unpack('>4H', m.uc.mem_read(0x8000, 8)), version)
         self.assertEqual(m.globals, 0)
         self.assertFalse(m.allocations)
@@ -304,6 +349,9 @@ class CompiledM68KTests(unittest.TestCase):
         if 'nl_usb_open' in m.symbols: caps = 0x8000003f
         if 'NioLibNetJsonQuery' in m.symbols: caps = 0x8000007f
         if 'NioLibResetTransport' in m.symbols: caps = 0x800000ff
+        if 'NioLibRawCall' in m.symbols: caps = 0x800001ff
+        if 'NioLibGetNetLibStatus' in m.symbols: caps = 0x800003ff
+        if 'nl_usb_none' in m.symbols: caps &= ~0x20          # built without the Handspring SDK
         self.assertEqual(m.read32(0x8000), caps)
 
     def test_rejected_resource_leaves_no_allocations_or_locks(self):

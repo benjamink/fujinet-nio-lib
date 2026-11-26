@@ -20,7 +20,8 @@ static void defaults(NioLibConfig *c)
 Boolean nl_config_valid(const NioLibConfig *c)
 {
     return c && c->size == sizeof(*c) && c->version == nioConfigVersion &&
-        (c->transport == nioTransportSpringboard || c->transport == nioTransportSerial || c->transport == nioTransportUSB) &&
+        (c->transport == nioTransportSpringboard || c->transport == nioTransportSerial ||
+         c->transport == nioTransportUSB || c->transport == nioTransportNetwork) &&
         !(c->serialOptions & ~nioSerialRTSCTS) &&
         (c->serialBaud == 9600UL || c->serialBaud == 19200UL ||
          c->serialBaud == 38400UL || c->serialBaud == 57600UL || c->serialBaud == 115200UL) &&
@@ -62,7 +63,8 @@ uint8_t fn_transport_init(void)
      * must not silently open a different backend on the user's behalf. */
     if (nl_config_read(&c) == nioConfigInvalid) return FN_ERR_INVALID;
     result = c.transport == nioTransportSpringboard ? nl_cs1_init() :
-             c.transport == nioTransportSerial ? nl_serial_open(&c) : nl_usb_open();
+             c.transport == nioTransportSerial ? nl_serial_open(&c) :
+             c.transport == nioTransportNetwork ? nl_netlib_open() : nl_usb_open();
     if (!result) active = c.transport;
     return result;
 }
@@ -71,6 +73,7 @@ void fn_transport_close(void)
     if (active == nioTransportSpringboard) nl_cs1_close();
     if (active == nioTransportSerial) nl_serial_close();
     if (active == nioTransportUSB) nl_usb_close();
+    if (active == nioTransportNetwork) nl_netlib_close();
     active = 0;
 }
 uint8_t fn_transport_ready(void)
@@ -78,6 +81,7 @@ uint8_t fn_transport_ready(void)
     if (active == nioTransportSpringboard) return nl_cs1_ready();
     if (active == nioTransportSerial) return nl_serial_ready();
     if (active == nioTransportUSB) return nl_usb_ready();
+    if (active == nioTransportNetwork) return nl_netlib_ready();
     return 0;
 }
 uint8_t fn_transport_exchange_buffers(const uint8_t *request, uint16_t length,
@@ -91,9 +95,10 @@ uint8_t fn_transport_exchange_buffers(const uint8_t *request, uint16_t length,
         return FN_ERR_INVALID;
     if (active == nioTransportSpringboard)
         return nl_cs1_exchange_buffers(request, length, response, capacity, got);
-    if (active == nioTransportSerial || active == nioTransportUSB) {
+    if (active == nioTransportSerial || active == nioTransportUSB || active == nioTransportNetwork) {
         result = active == nioTransportSerial ?
             nl_serial_exchange(request, length, response, capacity, got) :
+            active == nioTransportNetwork ? nl_netlib_exchange(request, length, response, capacity, got) :
             nl_usb_exchange(request, length, response, capacity, got);
         last_reply = result;
         return result;
@@ -108,7 +113,8 @@ uint8_t fn_transport_exchange(void)
 UInt16 nl_transport_begin(void)
 {
     return active == nioTransportSpringboard ? nl_cs1_begin() :
-           (active == nioTransportSerial || active == nioTransportUSB) ? FN_OK : FN_ERR_NOT_READY;
+           (active == nioTransportSerial || active == nioTransportUSB ||
+            active == nioTransportNetwork) ? FN_OK : FN_ERR_NOT_READY;
 }
 UInt16 nl_transport_probe(UInt16 *host, UInt16 *busy)
 {
@@ -118,18 +124,22 @@ UInt16 nl_transport_probe(UInt16 *host, UInt16 *busy)
     if ((active ? active : c.transport) == nioTransportSpringboard) return nl_cs1_probe(host, busy);
     if ((active ? active : c.transport) == nioTransportUSB)
         return nl_usb_pending() ? FN_ERR_BUSY : nl_usb_available() ? FN_OK : FN_ERR_NOT_FOUND;
+    if ((active ? active : c.transport) == nioTransportNetwork)
+        return nl_netlib_available() ? FN_OK : FN_ERR_NOT_FOUND;
     /* Serial manager presence is not proof of a cable or an NIO peer. */
     return nl_serial_pending() ? FN_ERR_BUSY : FN_OK;
 }
 UInt16 nl_transport_pending(void)
 {
     return active == nioTransportUSB ? nl_usb_pending() :
-           active == nioTransportSerial ? nl_serial_pending() : nl_cs1_pending();
+           active == nioTransportSerial ? nl_serial_pending() :
+           active == nioTransportNetwork ? 0 : nl_cs1_pending();
 }
 UInt16 nl_ambiguous(void)
 {
     return active == nioTransportUSB ? nl_usb_pending() :
-           active == nioTransportSerial ? nl_serial_pending() : nl_cs1_ambiguous();
+           active == nioTransportSerial ? nl_serial_pending() :
+           active == nioTransportNetwork ? 0 : nl_cs1_ambiguous();
 }
 UInt16 nl_last_result(void)
 {
@@ -142,6 +152,7 @@ Err nl_transport_reset(UInt16 transport)
     if (transport == nioTransportSpringboard) return nl_cs1_reset();
     if (transport == nioTransportSerial) return nl_serial_reset();
     if (transport == nioTransportUSB) return nl_usb_reset();
+    if (transport == nioTransportNetwork) return errNone;   /* nothing held between sessions */
     return nioLibErrParam;
 }
 void nl_transport_status(NioLibTransportStatus *s)
@@ -153,6 +164,7 @@ void nl_transport_status(NioLibTransportStatus *s)
     s->maxPacket = 1024; s->maxSessions = FN_MAX_SESSIONS;
     s->result = s->configFlags == nioConfigInvalid ? FN_ERR_INVALID : FN_OK;
     if (c.transport == nioTransportUSB && !nl_usb_available()) s->result = FN_ERR_NOT_FOUND;
+    if (c.transport == nioTransportNetwork && !nl_netlib_available()) s->result = FN_ERR_NOT_FOUND;
     if (active) s->flags |= nioStatusActive;
     if (active && fn_transport_ready()) s->flags |= nioStatusAvailable;
     if ((c.transport == nioTransportSpringboard && nl_cs1_pending()) ||
@@ -161,3 +173,7 @@ void nl_transport_status(NioLibTransportStatus *s)
         s->flags |= nioStatusRecoveryRequired; s->result = FN_ERR_BUSY;
     }
 }
+/* NioLibGetNetLibStatus and NioLibNetLibHangup reach the Network transport through here: netlib.o follows the other
+ * backends, out of services.o's DISP16 reach. */
+void nl_transport_netlib_status(NioLibNetLibStatus *s) { nl_netlib_status(s); }
+Err nl_transport_netlib_hangup(void) { return nl_netlib_hangup(); }

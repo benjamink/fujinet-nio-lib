@@ -19,6 +19,8 @@ else ifeq ($(COMPILER_FAMILY),amigagcc)
     -include makefiles/compiler-amigagcc.mk
 else ifeq ($(COMPILER_FAMILY),prcgcc)
     -include makefiles/compiler-prcgcc.mk
+else ifeq ($(COMPILER_FAMILY),macgcc)
+    -include makefiles/compiler-macgcc.mk
 else
     $(error Unknown compiler family: $(COMPILER_FAMILY))
 endif

@@ -126,6 +126,8 @@ class TeardownTests(unittest.TestCase):
                     self.assertEqual(m.client('fn_init'), 0)
                     address = m.globals
                     if flush:
+                        # Reclaim the line first: the stuck send is then the request itself.
+                        self.assertEqual(m.client('fn_clock_get', struct.pack('>I', 0x9600)), 0)
                         m.tx_pending = True; m.flush_fail = True
                         self.assertNotEqual(m.client('fn_clock_get', struct.pack('>I', 0x9600)), 0)
                         m.assert_storage_owned(self)

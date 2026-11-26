@@ -15,15 +15,18 @@ make test-palmos-shared PALMOS_SHARED_PYTHON=build/palmos-test-venv/bin/python
 Missing Unicorn, required artifacts or ABI audit entries **fails** the target.
 Native image tests do not replace compiled execution. The build audit checks
 resources, trap ordinals, relocations, A4 entry/exit, absence of A5 accesses and
-unwanted CRT code. The full gate builds every configured target including Palm:
+unwanted CRT code. The general gate builds configured non-Palm targets and runs
+the host/emulator checks:
 
 ```sh
 make check PALMOS_SHARED_PYTHON=build/palmos-test-venv/bin/python
 ```
 
-The full check requires the other platform toolchains as well; the Palm image
-alone is not an all-target environment. Non-Palm builds such as `make linux`
-do not require Palm tooling.
+Run `make check-palmos` as well: SDK-dependent Palm builds, execution tests and
+growth fixtures are separate from the general `make check` gate. The general
+check requires the other platform toolchains; the Palm image alone is not an
+all-target environment. Non-Palm builds such as `make linux` do not require
+Palm tooling.
 
 Test the optional SDK build separately:
 
@@ -33,9 +36,28 @@ make test-palmos-shared PALMOS_SDK_VERSION=3.5 \
   PALMOS_SHARED_PYTHON=build/palmos-test-venv/bin/python
 ```
 
+Both SDKs build (`PALMOS_SDK_VERSION=3.1`, the default, and `3.5`); the image audit runs in each build.
+
+The Network transport's NIO core has a native host test, part of `make check`
+(`make test-palmos-netlib`): it runs `shared/netlib/` over BSD sockets against a
+scripted server on 127.0.0.1, covering HTTP and `tcp://` sessions, control-character
+refusal and short bodies. It uses address and undefined-behaviour sanitizers when
+the compiler has them.
+
 Coverage includes compiled library/client globals, ownership, handles,
 validation, CS1 deadlines, serial SLIP/partial I/O, USB counted I/O, retained
 driver memory, readiness, JSON selectors and ABI 1.5 confirmed recovery.
+ABI 1.6 adds compiled service/client coverage for files, clock formats, Wi-Fi,
+AppStore/appkeys, catalogs/mounts, disks and header Open across scripted peers.
+These tests also check capability/version negotiation and guarded new traps,
+including ABI 1.7's NetLib traps and the refusal of the 1.6 services by an
+unpublished 1.6 Network-transport build (bit `0x200`).
+The Network transport (`test_palmos_shared_netlib.py`) runs the compiled NIO
+core and NetLib glue against mocked `Net.lib` traps and scripted in-Python
+HTTP/TCP peers: sessions, NetLib open/close-wait status, Hang up, refused
+connects and NetLib's absence. No real network is used.
+The layout tests exercise independent code/global limits and early/late growth;
+they are part of `make check-palmos` and require the installed Palm toolchain.
 Recovery tests check idle/confirmation guards, failed preference writes, no
 reset-time packets, reload persistence and reuse after modeled peer reset.
 They do not establish real ROM timing, reset persistence or physical recovery.
@@ -71,11 +93,12 @@ forward compatibility, not actual OS 3.1H support. SDK 3.1H hardware, serial
 and macOS qualification remain separate.
 
 For each transport, induce a timeout or malformed reply, end the client and
-record RecoveryRequired and its unsaved NiL1 marker. Verify after library
+record RecoveryRequired and its NiL1 marker (an unsaved preference for USB and
+serial, a feature for CS1). Verify after library
 unload/reload. In a separate controlled run perform a Palm soft reset and
 inspect the marker before reset/Save/Test actions. Record whether the original
 marker and RecoveryRequired survived; do not infer persistence from mocks.
-Use a debugger/preference inspector for the raw record.
+Use a debugger, or a preference or feature inspector, for the raw record.
 
 Reset the actual remote peer/link as described in the
 [recovery procedure](palmos-shared-library.md#globals-cleanup-and-recovery),
@@ -83,3 +106,56 @@ then confirm Reset in NIO Config. Verify the flag clears, the next Clock passes
 and the host has no old handles. Canceling Reset must preserve the marker.
 Save changes before Reset. Preserve logs/Palm errors for failures; never replay
 a state-changing operation merely to find out whether it succeeded.
+
+## FileRead and FileWrite speed tests
+
+NioLibTest's **Network** screen provides **FileRead** and **FileWrite** buttons.
+These use the public ABI 1.6 FileDevice calls through the selected transport;
+they add no private traps, transport instrumentation, or protocol extensions.
+Install the matching ABI 1.6 NioLib with the test app. Older libraries reject
+these calls through the existing capability/version checks.
+
+Both tests transfer 65,536 bytes using 512-byte calls. Byte `i` must equal
+`(i ^ (i >> 8)) & 255`, giving the expected checksum `007F8000`. Every returned
+data byte is checked, so a matching checksum alone cannot produce PASS.
+
+FileRead defaults to
+`tnfs+tcp://tnfs.fujinet.online/PALM/nio-throughput.bin`. The URI field is
+editable, and other fixtures can be generated with:
+
+```python
+from pathlib import Path
+Path("nio-throughput.bin").write_bytes(
+    bytes((i ^ (i >> 8)) & 255 for i in range(65536)))
+```
+
+Serve that file through a FileDevice-supported URI. The measured read interval
+contains 128 calls and byte verification, excluding initialization and cleanup;
+it verifies the first 64 KiB and does not require an EOF probe.
+
+FileWrite defaults to `host:/nio-write-bench.bin`, a disposable file under the
+POSIX backend's configured host filesystem root. **The first write creates or
+truncates the selected destination.** The app asks for confirmation before
+writing. Use a writable, disposable URI; do not select an existing valuable
+file. The test file remains after the run for inspection.
+
+The write interval measures pattern generation and 128 FileWrite calls. A
+separately timed verification phase reads all data back and performs one final
+one-byte read at offset 65,536, rejecting an unexpected tail. Readback normally
+takes 129 calls. Initialization, verification and cleanup are excluded from the
+reported write rate and shown in **Details**. Both screens show raw ticks,
+bytes/sec, error information and cleanup results. Timing is synchronous and
+does not update the screen during the measured loop.
+
+Neither test retries at the application level. A short write records the
+positively acknowledged byte count and stops; an error does not resend the
+operation. Corruption, short reads, unexpected trailing data, or uncertain
+cleanup prevent PASS. Transfer errors remain separate from cleanup errors.
+Each run ends its client, including failed runs.
+
+The request/response scratch space and data are separate app-owned stack
+buffers: 1,034 bytes for FileRead and 1,280 bytes for FileWrite, plus ordinary
+locals/call frames. No persistent transfer buffer or hidden allocation is
+added to the library. The compiled regression tests execute the app and actual
+client/service code against modeled CS1/USB peers. Injected ticks validate the
+timing partition, not real throughput; physical measurements require hardware.
