@@ -184,8 +184,19 @@ Serial Library. It selects the cradle port, 8N1, 9600/19200/38400/57600/115200 b
 (default 115200), with no flow control or RTS/CTS. It reuses `fn_stream_session_t`
 and SLIP. A 1024-byte packet needs at most 2050 encoded bytes, including two END
 bytes. Port, installed RX buffer, TX storage and acquired legacy references are
-tracked independently. No keyboard-daemon takeover or HotSync arbitration is
-implemented; Handspring-specific physical serial behavior remains unqualified.
+tracked independently. No keyboard-daemon takeover is implemented;
+Handspring-specific physical serial behavior remains unqualified.
+
+FujiNet NIO can lend an idle cradle line to HotSync (fujinet-nio
+`docs/hotsync.md`, "Cradle"): after a minute without a FujiBus request it
+listens at 9600 baud for 1.5 s of every 3 s and drops what arrives meanwhile.
+A request lost that way would leave the serial marker set, and every app would
+then get BUSY until NIO Config's Reset. So, as the static `palmos-serial`
+target does, the backend reclaims the line before the first request after the
+port opens or after 30 s without a reply: FujiDevice GetInfo (read-only, safe to
+repeat), up to 8 times with a 700 ms wait each, outside the marker. The request
+itself is sent once, and only after GetInfo has been answered; if nothing
+answers, it is not sent and nothing is left pending (implementation 16).
 
 **USB** finds/loads Handspring's `USB Library` / `HsUs`, checks the required
 counted API dispatch range and explicitly opens Generic Port 2 (`0x0002`), not

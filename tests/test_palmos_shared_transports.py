@@ -40,7 +40,15 @@ class TransportMachine(NetworkMachine):
         self.saved_preferences = {}
         self.zero_progress = False
         self.serial_flags = self.serial_cts = self.baud = None
+        # NIO's HotSync cradle windows: packets dropped unanswered while the line is lent.
+        self.lent_packets = 0
+        # The FujiDevice GetInfo that reclaims the line after the port opens or 30 s
+        # (3000 ticks) of quiet; the model answers it apart from the requests it serves.
+        self.wakes, self.line_fresh, self.last_answer = [], True, 0
         super().__init__()
+
+    def is_wake(self, packet):
+        return packet[:2] == b'\x70\x01' and (self.line_fresh or self.now - self.last_answer >= 3000)
 
     def hook(self, uc, pc, size, context):
         if bytes(uc.mem_read(pc, 2)) != b'\x4e\x4f':
@@ -94,6 +102,7 @@ class TransportMachine(NetworkMachine):
             if not self.serial_available: return 0x301
             if self.serial_busy: return 0x307
             self.serial_opened = True
+            self.line_fresh = True
             self.baud = self.read32(sp + (4 if old else 4))
             if not old: self.uc.mem_write(self.read32(sp + 8), b'\0\x09')
         elif selector == 3:
@@ -129,6 +138,16 @@ class TransportMachine(NetworkMachine):
                 if value == 0xc0 and len(self.serial_tx) > 1:
                     packet = unslip(bytes(self.serial_tx))
                     self.serial_tx.clear()
+                    if self.lent_packets:
+                        self.lent_packets -= 1
+                        if self.is_wake(packet): self.wakes.append(None)
+                        return n
+                    if self.is_wake(packet):
+                        self.wakes.append(self.now)
+                        self.line_fresh, self.last_answer = False, self.now
+                        self.serial_rx += slip(reply(0x70, 1, b'\x01\x03v1!\x04test'))
+                        return n
+                    if self.serial_mode == 'normal': self.last_answer = self.now
                     answer = self.execute(packet)
                     if self.serial_reply is not None: answer = self.serial_reply
                     if self.serial_mode == 'silent': pass
@@ -221,7 +240,9 @@ class TransportTests(unittest.TestCase):
     def test_serial_real_common_clock_two_handles_and_cleanup(self):
         m = self.machine(); _, token, result = m.begin(); self.assertEqual(result, 0)
         self.assertEqual(m.clock(token), (0, 0, bytes.fromhex('00f1536500000000')))
-        self.assertEqual(bytes(m.sent), slip(bytes.fromhex('450106004c00')))
+        wake = bytes.fromhex('700107007900') + b'\x01'
+        wake = wake[:4] + bytes([checksum(wake)]) + wake[5:]
+        self.assertEqual(bytes(m.sent), slip(wake) + slip(bytes.fromhex('450106004c00')))
         a, b = m.net_open(token), m.net_open(token)
         self.assertEqual((a[2], b[2]), (0, 0)); self.assertNotEqual(a[1], b[1])
         for h in (b[1], a[1]):
@@ -269,7 +290,7 @@ class TransportTests(unittest.TestCase):
             m.tx_short = mode == 'txshort'; m.rx_error = mode == 'line'
             m.tx_pending = mode == 'pending'; m.pref_write_failure = mode == 'pref'
             self.assertNotEqual(m.clock(token)[1], 0)
-            if mode == 'pref': self.assertEqual(m.send_counter, 0)
+            if mode == 'pref': self.assertFalse(m.requests)  # only the line's reclaim went out
             m.end(token)
             self.assertFalse(m.serial_opened)
 
@@ -286,7 +307,8 @@ class TransportTests(unittest.TestCase):
         self.assertEqual(exchange(), 0)
         self.assertEqual(m.read16(0x9c10), 1024)
         self.assertEqual(bytes(m.uc.mem_read(0x9800, 1024)), m.serial_reply)
-        self.assertEqual(len(m.sent), len(slip(bytes(request))))
+        self.assertEqual(len(m.wakes), 1)
+        self.assertEqual(len(m.sent), len(slip(bytes(request))) + 9)  # the reclaim GetInfo first
         before = m.send_counter
         self.assertNotEqual(exchange(1025), 0); self.assertNotEqual(exchange(capacity=1025), 0)
         self.assertEqual(m.send_counter, before)
@@ -401,3 +423,31 @@ class TransportTests(unittest.TestCase):
         self.assertFalse(m.serial_opened)
         self.assertFalse(m.globals); self.assertFalse(m.registered)
         self.assertEqual(len(m.allocations), len(m.frees))
+
+    # FujiNet NIO lends an idle cradle line to HotSync (fujinet-nio docs/hotsync.md,
+    # "Cradle") and drops what arrives meanwhile. A request lost that way used to leave
+    # the pending marker, and every app on the link then answered "busy".
+    def test_line_lent_to_hotsync_is_reclaimed_before_the_request(self):
+        m = self.machine(); _, token, result = m.begin(); self.assertEqual(result, 0)
+        m.lent_packets = 2  # two reclaim attempts fall in a HotSync window
+        self.assertEqual(m.clock(token)[:2], (0, 0))
+        self.assertEqual(len(m.wakes), 3)
+        self.assertEqual([r[:2] for r in m.requests], [b'\x45\x01'])  # the request, once
+        self.assertEqual(m.status()[1][3] & 8, 0)
+        # Within 30 s the line is still the bus's: no reclaim.
+        m.now += 2900
+        self.assertEqual(m.clock(token)[:2], (0, 0)); self.assertEqual(len(m.wakes), 3)
+        # After an idle spell it is reclaimed again.
+        m.now += 3000
+        self.assertEqual(m.clock(token)[:2], (0, 0)); self.assertEqual(len(m.wakes), 4)
+        self.assertEqual(m.end(token)[:2], (0, 0))
+
+    def test_unreclaimed_line_sends_no_request_and_leaves_nothing_pending(self):
+        m = self.machine(); _, token, result = m.begin(); self.assertEqual(result, 0)
+        m.lent_packets = 8  # no reply to any reclaim attempt
+        self.assertNotEqual(m.clock(token)[1], 0)
+        self.assertEqual(len(m.wakes), 8); self.assertFalse(m.requests)
+        self.assertEqual(m.status()[1][3] & 8, 0)
+        self.assertEqual(m.clock(token)[:2], (0, 0))  # the line is back: no recovery needed
+        self.assertEqual(m.end(token)[:2], (0, 0))
+        self.assertEqual(m.begin()[2], 0)
